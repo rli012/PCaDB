@@ -1,5 +1,5 @@
 # PCaDB
-### A Comprehensive Database of Transcriptomes from Prostate Cancer Population Cohorts
+### a database of transcriptomes from prostate cancer population cohorts
 ---
 
 ![](https://github.com/rli012/PCaTranscriptome/blob/master/PCaDB.PNG)
