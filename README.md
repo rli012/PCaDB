@@ -7,9 +7,6 @@ Please cite: [Li, R. and Jia, Z., PCaDB - a comprehensive and interactive databa
 
 #### URL: http://bioinfo.jialab-ucr.org/PCaDB/
 
-#### Live Statistics: https://www.revolvermaps.com/livestats/map/59d9778kul4/
-
-
 ![](https://github.com/rli012/PCaTranscriptome/blob/master/PCaDB.PNG)
 
 ![](https://github.com/rli012/PCaTranscriptome/blob/master/pipeline.png)
