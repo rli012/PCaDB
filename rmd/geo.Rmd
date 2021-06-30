@@ -1,0 +1,135 @@
+---
+#title: GEO Data Collection
+output: html_document
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 1800px;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+h1.title {
+  font-size: 14px;
+  color: DarkRed;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo=TRUE, message=FALSE, eval=FALSE}
+
+####################################################################
+#######                  GEO Data Collection                 #######
+####################################################################
+
+library(GEOquery)
+library(oligo)
+
+################## Expression Data ##################
+
+# http://brainarray.mbni.med.umich.edu/Brainarray/Database/CustomCDF/CDF_download.asp
+# Version 24
+# R Source Package: O
+
+# Affymetrix Human Exon 1.0 ST Array: pd.huex10st.hs.gencodeg
+# Affymetrix Human Gene 2.0 ST Array: pd.huex20st.hs.gencodeg
+# Affymetrix Human Transcriptome Array 2.0: pd.hta20.hs.gencodeg
+# Affymetrix Human Genome U133A Array: pd.hgu133a.hs.gencodeg
+# Affymetrix Human Genome U133 Plus 2.0 Array: pd.hgu133plus2.hs.gencodeg
+
+gse <- 'GSE59745'
+
+# install.packages("http://mbni.org/customcdf/24.0.0/gencodeg.download/pd.huex10st.hs.gencodeg_24.0.0.tar.gz",
+#                  repos = NULL, type = "source")
+
+library(pd.huex10st.hs.gencodeg)
+
+filePaths <- getGEOSuppFiles(gse, baseDir = 'data/fromGEO', makeDirectory = FALSE,filter_regex = 'RAW')
+untar(paste0('data/fromGEO/', gse, '_RAW.tar'), exdir = paste0('data/fromGEO/', gse, '_RAW'))
+
+celFiles <- list.celfiles(paste0('data/fromGEO/', gse, '_RAW'), full.names=T, listGzipped=T)
+rawData <- read.celfiles(celFiles, pkgname = 'pd.huex10st.hs.gencodeg')
+probesetData <- oligo::rma(rawData)
+exprData <- exprs(probesetData)
+
+colnames(exprData) <- unlist(lapply(colnames(exprData), function(x) strsplit(x, '.', fixed=T)[[1]][1]))
+rownames(exprData) <- unlist(lapply(rownames(exprData), function(x) strsplit(x, '.', fixed=T)[[1]][1]))
+colnames(exprData) <- unlist(lapply(colnames(exprData), function(x) strsplit(x, '_', fixed=T)[[1]][1]))
+
+exprData <- exprData[which(startsWith(rownames(exprData), 'ENSG')),]
+
+################## Metadata ##################
+
+seriesMatrix <- getGEO(gse, AnnotGPL = FALSE, getGPL = FALSE, 
+                       GSEMatrix = TRUE, destdir = 'data/fromGEO/') # AnnotGPL = TRUE
+
+pheno <- pData(seriesMatrix[[1]])
+
+keep <- c('title','geo_accession','source_name_ch1',
+          colnames(pheno)[grep(':ch1|description', colnames(pheno))],
+          'contact_institute')
+
+pheno <- pheno[,keep]
+
+colnames(pheno) <- gsub(':ch1', '', colnames(pheno))
+colnames(pheno) <- gsub(' |-|\\.', '_', colnames(pheno))
+
+pheno[pheno=='-'] <- NA
+pheno[pheno=='unknown'] <- NA
+
+### Harmonized metadata
+traits <- c('sample_id','patient_id','tissue','batch','platform','sample_type',
+            'age_at_diagnosis','ethnicity','race','clinical_stage','clinical_t_stage',
+            'clinical_n_stage','clinical_m_stage','pathological_stage','pathological_t_stage',
+            'pathological_n_stage','pathological_m_stage','preop_psa','gleason_primary_pattern',
+            'gleason_secondary_pattern','gleason_tertiary_pattern','gleason_group','gleason_score',
+            'time_to_death','os_status','time_to_bcr','bcr_status','time_to_metastasis',
+            'metastasis_status','risk_group','treatment','additional_treatment')
+
+phenoData <- data.frame(matrix(NA, nrow=nrow(pheno), ncol=length(traits)), stringsAsFactors = F)
+
+colnames(phenoData) <- traits
+rownames(phenoData) <- rownames(pheno)
+
+phenoData <- data.frame(matrix(NA, nrow=nrow(pheno), ncol=length(traits)), stringsAsFactors = F)
+phenoData
+
+colnames(phenoData) <- traits
+rownames(phenoData) <- rownames(pheno)
+colnames(phenoData)
+
+phenoData$sample_id <- pheno$title
+phenoData$patient_id <- pheno$description
+phenoData$platform <- 'Affymetrix Human Exon 1.0 ST Array'
+phenoData$sample_type <- pheno$source_name_ch1
+phenoData$pathological_t_stage <- pheno$pt_stage
+phenoData$preop_psa <- as.numeric(pheno$`pre_treatment_psa_(µg/l)`)
+pheno$gleason_score[pheno$gleason_score==6] <- '3+3'
+phenoData$gleason_primary_pattern <- as.numeric(lapply(pheno$gleason_score, function(x) strsplit(x, '\\+|\\=')[[1]][1]))
+phenoData$gleason_secondary_pattern <- as.numeric(lapply(pheno$gleason_score, function(x) strsplit(x, '\\+|\\=')[[1]][2]))
+phenoData$gleason_score <- phenoData$gleason_primary_pattern + phenoData$gleason_secondary_pattern
+phenoData$gleason_group <- ifelse(is.na(phenoData$gleason_score), NA, paste(phenoData$gleason_primary_pattern, phenoData$gleason_secondary_pattern, sep='+'))
+
+phenoData$bcr_status <- ifelse(pheno$psa_progression=='yes', 1, 0)
+phenoData$metastasis_status <- ifelse(pheno$development_of_metastasis=='yes', 1, 0)
+
+################## ExpressionSet ##################
+ovlp <- intersect(rownames(phenoData), colnames(exprData))
+
+exprData <- exprData[,ovlp]
+phenoData <- phenoData[ovlp,]
+
+all(rownames(phenoData) == colnames(exprData))
+
+eSet <- ExpressionSet(assayData = as.matrix(exprData),
+                      phenoData = AnnotatedDataFrame(phenoData))
+
+saveRDS(eSet, file=paste0('data/Database/', gse, '_eSet.RDS'))
+
+```

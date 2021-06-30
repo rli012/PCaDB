@@ -1,0 +1,158 @@
+---
+#title: TCGA Data Collection
+output: html_document
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 1800px;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+h1.title {
+  font-size: 14px;
+  color: DarkRed;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo=TRUE, message=FALSE, eval=FALSE}
+
+####################################################################
+#######                TCGA-PRAD Data Collection             #######
+####################################################################
+
+library(GDCRNATools)
+library(edgeR)
+library(limma)
+
+project <- 'TCGA-PRAD'
+rnadir <- paste('data', project, 'RNAseq', sep='/')
+
+
+################## Expression Data ##################
+
+### Download RNAseq data
+gdcRNADownload(project.id     = project, 
+               data.type      = 'RNAseq', 
+               write.manifest = FALSE,
+               method         = 'gdc-client',
+               directory      = rnadir)
+
+### Parse RNAseq metadata
+meta.rna <- gdcParseMetadata(project.id = project,
+                                   data.type  = 'RNAseq', 
+                                   write.meta = FALSE)
+
+### Filter duplicated samples
+meta.rna <- gdcFilterDuplicate(meta.rna)
+
+### Filter non-Primary Tumor and non-Solid Tissue Normal samples
+meta.rna <- gdcFilterSampleType(meta.rna)
+
+
+### Merge RNAseq data
+rnaCounts <- gdcRNAMerge(metadata  = meta.rna, 
+                         path      = rnadir, # the folder in which the data stored
+                         organized = FALSE, # if the data are in separate folders
+                         data.type = 'RNAseq')
+
+### TMM normalization
+dge <-  DGEList(counts = rnaCounts)
+dge = calcNormFactors(dge, method = 'TMM')
+
+exprData <- edgeR::cpm(dge,log = TRUE)
+
+### Filter out low-expression genes (cpm>1 in at least 50% of the samples)
+# keep <- rowSums(edgeR::cpm(dge) > 1) >= 0.5*ncol(rnaCounts)
+# sum(keep)
+# dge <- dge[keep,,keep.lib.sizes = TRUE]
+
+### Voom normalization
+#v <- voom(dge, design=NULL, plot = FALSE)
+
+
+################## Metadata ##################
+
+### Download clinical data
+clinical.dir <- paste('data/Clinical', sep='/')
+gdcClinicalDownload(project.id     = project, 
+                    write.manifest = FALSE,
+                    method         = 'gdc-client',
+                    directory      = clinical.dir)
+
+### Merge clinical data
+clinical.data <- gdcClinicalMerge(path = clinicaldir, key.info = TRUE)
+clinical.data[1:6,5:10]
+
+### Meatadata
+rownames(meta.rna) <- substr(rownames(meta.rna),start = 1, stop = 15)
+
+pheno1 <- clinical.data
+rownames(pheno1) <- paste0(rownames(pheno1), '-01')
+
+pheno1 <- pheno1[match(rownames(meta.rna), rownames(pheno1)),]
+rownames(pheno1) <- rownames(meta.rna)
+
+pheno2 <- readRDS('data/rData/Clinical_TCGA_PRAD_With_PreopPSA_and_BCR.RDS')
+pheno2 <- pheno2[match(rownames(meta.rna), rownames(pheno2)),]
+
+rownames(pheno2) <- rownames(meta.rna)
+
+### Harmonized metadata
+traits <- c('sample_id','patient_id','tissue','batch','platform','sample_type',
+            'age_at_diagnosis','ethnicity','race','clinical_stage','clinical_t_stage',
+            'clinical_n_stage','clinical_m_stage','pathological_stage','pathological_t_stage',
+            'pathological_n_stage','pathological_m_stage','preop_psa','gleason_primary_pattern',
+            'gleason_secondary_pattern','gleason_tertiary_pattern','gleason_group','gleason_score',
+            'time_to_death','os_status','time_to_bcr','bcr_status','time_to_metastasis',
+            'metastasis_status','risk_group','treatment','additional_treatment')
+
+phenoData <- data.frame(matrix(NA, nrow=nrow(pheno1), ncol=length(traits)), stringsAsFactors = F)
+
+colnames(phenoData) <- traits
+rownames(phenoData) <- rownames(pheno1)
+
+phenoData$sample_id <- rownames(pheno1)
+phenoData$patient_id <- substr(phenoData$sample_id, start = 1, stop = 12)
+phenoData$platform <- 'Illumina'
+phenoData$sample_type <- ifelse(grepl('-11', phenoData$sample_id), 'Normal', 'Primary')
+phenoData$age_at_diagnosis <- pheno1$age_at_initial_pathologic_diagnosis
+phenoData$ethnicity <- pheno1$ethnicity
+phenoData$race <- pheno1$race
+phenoData$clinical_t_stage <- pheno1$clinical_T
+phenoData$clinical_n_stage <- pheno1$clinical_N
+phenoData$clinical_m_stage <- pheno1$clinical_M
+phenoData$pathological_t_stage <- pheno1$pathologic_T
+phenoData$pathological_n_stage <- pheno1$pathologic_N
+phenoData$pathological_m_stage <- pheno1$pathologic_M
+phenoData$preop_psa <- pheno2$preop_psa
+phenoData$gleason_primary_pattern <- pheno2$primary_pattern
+phenoData$gleason_secondary_pattern <- pheno2$secondary_pattern
+phenoData$gleason_tertiary_pattern <- pheno2$tertiary_pattern
+phenoData$gleason_score <- phenoData$gleason_primary_pattern + phenoData$gleason_secondary_pattern
+phenoData$gleason_group <- ifelse(is.na(phenoData$gleason_score), NA, paste(phenoData$gleason_primary_pattern, phenoData$gleason_secondary_pattern, sep='+'))
+
+phenoData$time_to_death <- ifelse(!is.na(pheno2$days_to_death), 
+                                  round(as.numeric(pheno2$days_to_death/365*12),2), 
+                                  round(as.numeric(pheno2$days_to_last_followup/365*12),2))
+phenoData$os_status <- ifelse(!is.na(pheno2$days_to_death), 1, 0)
+
+phenoData$time_to_bcr <- ifelse(!is.na(pheno2$days_to_first_biochemical_recurrence),
+phenoData$bcr_status <- ifelse(!is.na(pheno2$days_to_first_biochemical_recurrence), 1, 0)
+
+################## ExpressionSet ##################
+all(rownames(phenoData) == colnames(exprData))
+
+eSet <- ExpressionSet(assayData = as.matrix(exprData),
+                      phenoData = AnnotatedDataFrame(phenoData))
+
+saveRDS(eSet, file=paste0('data/Database/', project, '_eSet.RDS'))
+
+```
