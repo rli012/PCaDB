@@ -7,8 +7,8 @@ Please cite: [Li, R. and Jia, Z., PCaDB - a comprehensive and interactive databa
 
 #### URL: http://bioinfo.jialab-ucr.org/PCaDB/
 
-![](https://github.com/rli012/PCaTranscriptome/blob/master/PCaDB.PNG)
+![](https://github.com/rli012/PCaTranscriptome/blob/master/www/img/home.png)
 
-![](https://github.com/rli012/PCaTranscriptome/blob/master/pipeline.png)
+![](https://github.com/rli012/PCaTranscriptome/blob/master/www/img/pipeline.png)
 
-![](https://github.com/rli012/PCaTranscriptome/blob/master/analysis.png)
+![](https://github.com/rli012/PCaTranscriptome/blob/master/www/img/analysis.png)
