@@ -28,6 +28,7 @@ library(shinydashboardPlus)
 library(shinythemes)
 library(dashboardthemes)
 library(shinycssloaders)
+library(shinydisconnect)
 #library(shinybusy)
 #library(waiter)
 
@@ -39,7 +40,7 @@ source('helper_functions.R')
 ######   Theme
 
 title <- tagList(
-  tags$img(src='logo.png', height=40) #width=150, 
+  tags$img(src='img/logo.png', height=40) #width=150, 
 )
 
 logo_blue_gradient <- shinyDashboardLogoDIY(
@@ -217,7 +218,7 @@ gene.id <- selectizeInput(inputId = "gene.id", label=search.gene.label, #list(h4
 
 
 left_menu <- tagList(
-  tags$img(src='ucr1.jpg', width=50),
+  tags$img(src='img/ucr1.jpg', width=50),
   h4(strong("Welcome to PCaDB, a database of transcriptomes from prostate cancer population cohorts"), align='left', style='font-family:Georgia;color:#2C3E50')#,
   #tags$img(src='ucr2.jpg', width=60)
 )
@@ -305,7 +306,8 @@ tab_home <- fluidRow(
            PCaDB provides a user-friendly interface for the comprehensive analysis of individual 
            genes, prognostic signatures, and the whole transcriptomes to elucidate the molecular 
            heterogeneity in PCa, understand the mechanisms of tumor initiation and progression, 
-           as well as develop and validate prognostic signatures in large independent cohorts', style = "font-size: 120%;"),
+           as well as develop and validate prognostic signatures in large independent cohorts', 
+           style = "font-size: 120%;"),
     
     # column(12, 
     #        tags$hr(style="border-top: 1px dashed #A9A9A9")
@@ -313,7 +315,7 @@ tab_home <- fluidRow(
     
     # actionLink("link_to_tab_query", tags$img(src='analysis.png', height=500)),
     
-    tags$img(src='analysis.png', height=500),
+    tags$img(src='img/analysis.png', height=500),
     
     
     # column(12,
@@ -333,10 +335,15 @@ tab_home <- fluidRow(
     
     h5(strong("Citation")),
     tags$p('Please cite the following publication:
-           Li, R. and Jia, Z., PCaDB - a comprehensive and interactive database for transcriptomes from prostate cancer population cohorts. bioRxiv (2021)', style = "font-size: 120%;"),
-    tags$p(HTML("<a href='https://doi.org/10.1093/bib/bbaa197' target='_blank'><h5>hhttps://doi.org/10.1093/bib/bbaa197</h5></a>")),
+           Li,R. and Jia,Z. (2021) PCaDB - a comprehensive and interactive database for transcriptomes from prostate cancer population cohorts. bioRxiv, 10.1101/2021.06.29.449134.', 
+           style = "font-size: 120%;"),
+    tags$p(HTML("<a href='https://doi.org/10.1101/2021.06.29.449134' target='_blank'><h5>https://doi.org/10.1101/2021.06.29.449134</h5></a>")),
     br(),
-    tags$p(HTML('<script type="text/javascript" src="//rf.revolvermaps.com/0/0/3.js?i=5dfs4o8b9k7&amp;b=5&amp;s=0&amp;m=2&amp;cl=ffffff&amp;co=010020&amp;cd=aa0000&amp;v0=60&amp;v1=60&amp;r=1" async="async"></script>'), align = 'left')
+    tags$p(HTML('<script type="text/javascript" src="//rf.revolvermaps.com/0/0/3.js?i=5dfs4o8b9k7&amp;b=5&amp;s=0&amp;m=2&amp;cl=ffffff&amp;co=010020&amp;cd=aa0000&amp;v0=60&amp;v1=60&amp;r=1" async="async"></script>'), align = 'left'),
+    
+    hr(),
+    
+    tags$p(HTML("<script type='text/javascript' id='clustrmaps' src='//cdn.clustrmaps.com/map_v2.js?cl=ffffff&w=251&t=tt&d=m1OK5wpD2xEM4YTLneQr-HXIvLS_D8Vs34uIkQuX-8w'></script>"), align = 'left')
     )
 )
 
@@ -580,16 +587,16 @@ tab_signature <- fluidRow(
     tags$p("A comprehensive collection of 30 published gene expression-based prognostic signatures for prostate cancer is 
            included in PCaDB. The performances of the signatures have been investigated in the study [",
            a("Comprehensive evaluation of machine learning models and gene expression signatures for prostate cancer prognosis using large population cohorts", 
-             href = "https://doi.org/10.1093/bib/bbaa197",target='_blank'), "]. Comprehensive characterization of the signatures can be further performed in PCaDB.", 
+             href = "https://doi.org/10.1101/2021.07.02.450975",target='_blank'), "]. Comprehensive characterization of the signatures can be further performed in PCaDB.", 
            style = "font-size: 120%;"),
     #tags$p("Comprehensive characterization of the signatures can be further performed in PCaDB.", style = "font-size: 120%;"),
     
     
     br(),
     column(6,
-           tags$img(src='signature_table.png',width=450)),
+           tags$img(src='img/signature_table.png',width=450)),
     column(6,
-           tags$img(src='signature_circos.png',width=450))
+           tags$img(src='img/signature_circos.png',width=450))
     
   ),
   
@@ -1241,7 +1248,7 @@ tab_pipeline <- fluidRow(
     
     tags$hr(style="border-top: 1px dashed #A9A9A9"),
     
-    tags$img(src='pipeline.png', height=350) #width=150,
+    tags$img(src='img/pipeline.png', height=350) #width=150,
     
     
   ),
@@ -1257,23 +1264,23 @@ tab_pipeline <- fluidRow(
            was downloaded and processed as described in a previous study (Li et al., 2020). 
            The HTSeq-Counts of RNA-seq and clinical data were downloaded and 
            processed by a series of functions in the R package ",
-           style = "font-size: 110%;display:inline"),
+           style = "font-size: 110%;display:inline;"),
     
     tags$i("GDCRNATools",
-           style = "font-size: 110%; display:inline"),
+           style = "font-size: 110%; display:inline;"),
            
     tags$p(" (Li et al., 2018). The raw count data was normalized using the Trimmed 
            Mean of Mvalues (TMM) method implemented in the R package ",
-           style = "font-size: 110%;display:inline"),
+           style = "font-size: 110%;display:inline;"),
     
     tags$i("edgeR",
-           style = "font-size: 110%; display:inline"),
+           style = "font-size: 110%; display:inline;"),
     
     tags$p(" (Robinson et al., 2010). Clinical characteristics, such as preoperative 
            prostate-specific antigen (PSA) level, which were not available in 
            the Genomic Data Commons (GDC) data portal were retrieved from Broad 
            GDAC Firehose (https://gdac. broadinstitute.org/).",
-           style = "font-size: 110%;display:inline"),
+           style = "font-size: 110%;display:inline;"),
     br(),
     br(),
     
@@ -1381,7 +1388,7 @@ tab_pipeline <- fluidRow(
            data of the probes were downloaded from the Brainarray database (GENCODEG, Version 24). 
            The expression data were preprocessed using the Robust Multichip Average (RMA) algorithm 
            implemented in the R package ", 
-           style = "font-size: 110%; display:inline"),
+           style = "font-size: 110%; display:inline;"),
     
     tags$i("oligo",
            style = "font-size: 110%; display:inline"),
@@ -1395,7 +1402,7 @@ tab_pipeline <- fluidRow(
            using other technologies were downloaded directly from GEO and log2 transformation may be  
            performed if it hadn't been done. Metadata in the series matrix files were downloaded 
            using the R package ", 
-           style = "font-size: 110%; display:inline"),
+           style = "font-size: 110%; display:inline;"),
     
     tags$i("GEOquery",
            style = "font-size: 110%; display:inline"),
@@ -1406,7 +1413,7 @@ tab_pipeline <- fluidRow(
     br(),
     
     tags$p("Below is the script for downloading, preprocessing, and organizing data from GEO.", 
-           style = "font-size: 110%; display:inline"),
+           style = "font-size: 110%; display:inline;"),
     
     
     tags$hr(style="border-top: 1px dashed #A9A9A9"),
@@ -1498,7 +1505,7 @@ tab_pipeline <- fluidRow(
     tags$p("[3] Li R., Wang S., Cui Y., Qu H., Chater J.M., Zhang L., Wei J., Wang M., 
            Xu Y., Yu L., Lu J., Feng Y., Zhou R., Huang Y., Ma R., Zhu J., Zhong W. and Jia Z. (2020). 
            Extended application of genomic selection to screen multiomics data for prognostic 
-           signatures of prostate cancer. Briefings in Bioinformormatics, bbaa197.",
+           signatures of prostate cancer. Briefings in Bioinformatics, bbaa197.",
            style = "font-size: 100%;"),
     tags$p("[4] Li, R., Qu, H., Wang, S., Wei, J., Zhang, L., Ma, R., Lu, J., Zhu, J., Zhong, W.D. and Jia, Z. (2018). 
            GDCRNATools: an R/Bioconductor package for integrative analysis of lncRNA, miRNA and mRNA data in GDC. 
@@ -1914,7 +1921,7 @@ tab_contact <- fluidRow(
     
     column(12,
            h5(strong("Please feel free to contact us if you have any questions on the database or need any help to 
-                     curate transcriptomics datasets for prostate cancer."), align='left', style='color:black'),
+                     curate transcriptomics datasets for prostate cancer."), align='left', style='color:black;'),
            br(),
            
            h5(strong("Ruidong Li, Ph.D. Research Data Scientist"), align='left', style='color:black'),
@@ -1952,6 +1959,19 @@ body=dashboardBody(
   #tags$head(tags$style(HTML('.box {margin: 1px;}'))), # distance between box
   
   theme_blue_gradient,
+  
+  disconnectMessage(
+    text = "Your session has timed out, please reload the page.",
+    refresh = "Reload now",
+    width = 'full', top = 'center', css = 'font-family:Georgia',
+    size = 30,
+    colour = google.blue,
+    background = "rgba(64, 64, 64, 0.9)",
+    overlayColour = "#999",
+    overlayOpacity = 0.7,
+    refreshColour = google.green
+  ),
+  
   tags$head(tags$meta(name = "viewport", content = "width=1200")),
   #tags$head(tags$style("#genes{color:black; font-size:12px; font-style:bold;}")),
   
@@ -1996,8 +2016,8 @@ body=dashboardBody(
 )
 
 
-# footer=dashboardFooter(right_text = HTML('<footer><script type="text/javascript" src="//rf.revolvermaps.com/0/0/3.js?i=5ec4xu8g4x1&amp;b=10&amp;s=0&amp;m=2&amp;cl=ffffff&amp;co=010020&amp;cd=aa0000&amp;v0=60&amp;v1=60&amp;r=1" async="async"></script></footer>'),
-#                        left_text = '')
+footer=dashboardFooter(right_text = HTML("<script type='text/javascript' id='clustrmaps' src='//cdn.clustrmaps.com/map_v2.js?cl=ffffff&w=300&t=tt&d=m1OK5wpD2xEM4YTLneQr-HXIvLS_D8Vs34uIkQuX-8w'></script>"),
+                       left_text = '')
 
 #https://www.revolvermaps.com/
 #                       left_text = HTML("<footer><h6>Contact: <a href='https://github.com/rli012' target='_blank'>Ruidong Li</a><br>Email: rli012@ucr.edu</h6><strong><h5><a href='http://jialab.ucr.acsitefactory.com/' target='_blank'>Jia Lab @ University of California, Riverside</a></h5></strong></footer>"))
