@@ -3,7 +3,8 @@
 ---
 
 #### Citation
-Please cite: [Li, R. and Jia, Z., PCaDB - a comprehensive and interactive database for transcriptomes from prostate cancer population cohorts. bioRxiv (2021)](https://www.biorxiv.org/content/10.1101/2020.10.04.325670v1)
+Please cite: [Li, R., Zhu, J., Zhong, W., Jia, Z. (2021). PCaDB - a comprehensive and interactive database for transcriptomes from prostate cancer population cohorts. bioRxiv](https://doi.org/10.1101/2021.06.29.449134
+)
 
 #### URL: http://bioinfo.jialab-ucr.org/PCaDB/
 
