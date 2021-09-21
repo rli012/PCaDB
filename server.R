@@ -23,6 +23,8 @@ library(ggrepel)
 library(dplyr)
 library(digest)
 library(glmnet)
+library(shinyWidgets)
+library(slickR)
 
 #library(shinydashboardPlus)
 #library(shinythemes)
@@ -46,6 +48,15 @@ server <- function(input, output, session) {
   
   shinyjs::hide(selector = ".navbar > .sidebar-toggle")
 
+  
+  output$slick_output <- renderSlickR({
+
+    imgs <- c('img/Figure1.jpg','img/Figure2.jpg','img/Figure3.jpg','img/Figure4.jpg')
+    slickR(imgs, height = 500, width='100%') + settings(dots = TRUE, autoplay = TRUE, autoplaySpeed = 3000)
+
+  })
+  
+  
   #show_modal_spinner(spin = 'semipolar', color = google.red, text = h4(strong('Loading data, please wait ...'))) # show the modal window
   
   updateSelectizeInput(session, 'gene.id', choices = gene.annotation, selected = gene.default, server = TRUE)
@@ -94,6 +105,7 @@ server <- function(input, output, session) {
   observeEvent(input$gene.id, {
     
     gene.id <- input$gene.id
+    gene.symbol <- gene.annotation[gene.id, 'gene_name']
     
     ### Gene Information
     
@@ -164,14 +176,17 @@ server <- function(input, output, session) {
     
   })
   
+  queryexpression <- reactiveValues()
+  
   output$query_boxplot <- renderPlot({
     
     expr.dataset.id <- expr.dataset.id()
     
     req(length(expr.data[[expr.dataset.id]][gene.id,])>0)
     
-    dataForBoxPlot <- data.frame(expr=expr.data[[expr.dataset.id]][gene.id,],
+    dataForBoxPlot <- data.frame(sample=rownames(meta.data[[expr.dataset.id]]),
                                  group=meta.data[[expr.dataset.id]][,'pcadb_group'],
+                                 expr=expr.data[[expr.dataset.id]][gene.id,],
                                  stringsAsFactors = F)
     
     # if (expr.dataset.id=='Taylor') {
@@ -179,8 +194,15 @@ server <- function(input, output, session) {
     #   dataForBoxPlot <- dataForBoxPlot[-filter,]
     # }
     
+    queryexpression$data <- dataForBoxPlot
+    
     p <- ExprBoxPlotFun(dataForBoxPlot, colors)
+    
+    queryexpression$plot <- p
+    
     p
+    
+    
     
   })#, height = 400, width = 600)
   
@@ -243,6 +265,47 @@ server <- function(input, output, session) {
     plotOutput("query_boxplot", height = plotHeight(), width = plotWidth())
   })
   
+  ###
+  output$query_expression_downbttn_csv <- renderUI({
+    req(gene.id %in% rownames(expr.data[[expr.dataset.id()]]))
+    downloadBttn(
+      outputId = "query.expression.downbttn.csv",
+      label = 'CSV',
+      style = "jelly",
+      color = "success", 
+      size = 'xs'
+    )
+  })
+  
+  output$query_expression_downbttn_pdf <- renderUI({
+    req(gene.id %in% rownames(expr.data[[expr.dataset.id()]]))
+    downloadBttn(
+      outputId = "query.expression.downbttn.pdf",
+      label = 'PDF',
+      style = "jelly",
+      color = "success",
+      size = 'xs'
+    )
+  })
+  
+  output$query.expression.downbttn.csv <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, expr.dataset.id(), 'Expression.csv', sep = '_')},
+    
+    content = function(file){
+      write.csv(queryexpression$data, file, row.names = FALSE, quote = F)
+    })
+  
+  output$query.expression.downbttn.pdf <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, expr.dataset.id(), 'Boxplot.pdf', sep = '_')},
+    
+    content = function(file){
+      pdf(file, width = plotWidth()/76, height = plotHeight()/76)
+      print(queryexpression$plot)
+      dev.off()
+    })
+  
+  
+  
   
   ### Survival
   
@@ -251,6 +314,7 @@ server <- function(input, output, session) {
   #   
   # })
   
+  querysurvival <- reactiveValues()
   
   dataForSurvivalAnalysis <- reactive({
     #bcr.dataset <- bcr.dataset()
@@ -267,7 +331,8 @@ server <- function(input, output, session) {
         next
       }
       
-      survData <- data.frame(expr=expr.data[[dt]][gene.id,idx],
+      survData <- data.frame(sample=rownames(meta.data[[dt]][idx,]),
+                             expr=expr.data[[dt]][gene.id,idx],
                              time.to.bcr=meta.data[[dt]][idx,'time_to_bcr'],
                              bcr.status=meta.data[[dt]][idx,'bcr_status'],
                              dataset=dt, stringsAsFactors = F)
@@ -282,6 +347,7 @@ server <- function(input, output, session) {
     
     dataForSurvivalAnalysis <- data.frame(dataForSurvivalAnalysis, stringsAsFactors = F)
     #colnames(dataForSurvivalAnalysis) <- c('expr','time.to.bcr','bcr.status','dataset')
+    querysurvival$data <- dataForSurvivalAnalysis
     dataForSurvivalAnalysis
     #print (dataForSurvivalAnalysis)
     
@@ -374,6 +440,8 @@ server <- function(input, output, session) {
     o <- order(kmTable$P.Value, decreasing = F)
     kmTable <- kmTable[o,]
     
+    querysurvival$kmtable <- kmTable
+    
     kmTable
     
     #print (kmTable$HR)
@@ -410,9 +478,50 @@ server <- function(input, output, session) {
     
     
     p <- transcriptomeKMForestplotFunT(dataForForestPlot)
+    querysurvival$forestplot <- p
     p
     
   }, width=800, height=(plotHeight.KM()+3)/10*450)
+  
+  ###
+  output$query_survival_forest_downbttn_csv <- renderUI({
+    req(querysurvival$forestplot)
+    downloadBttn(
+      outputId = "query.survival.forest.downbttn.csv",
+      label = 'CSV',
+      style = "jelly",
+      color = "success", 
+      size = 'xs'
+    )
+  })
+  
+  output$query_survival_forest_downbttn_pdf <- renderUI({
+    req(querysurvival$forestplot)
+    downloadBttn(
+      outputId = "query.survival.forest.downbttn.pdf",
+      label = 'PDF',
+      style = "jelly",
+      color = "success",
+      size = 'xs'
+    )
+  })
+  
+  output$query.survival.forest.downbttn.csv <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'KM_Surival_Analysis.csv', sep = '_')},
+    
+    content = function(file){
+      write.csv(querysurvival$kmtable, file, row.names = FALSE, quote = F)
+    })
+  
+  output$query.survival.forest.downbttn.pdf <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'KM_Forest_Plot.pdf', sep = '_')},
+    
+    content = function(file){
+      pdf(file, width = 10, height = (plotHeight.KM()+3)/10*450/76)
+      print(querysurvival$forestplot)
+      dev.off()
+    })
+  
   
   output$survival_km <- renderPlot({
     
@@ -442,17 +551,60 @@ server <- function(input, output, session) {
       
     }
     
+    
     # plot.height <- reactive(length(KMPlotList))
     # print (plot.height())
     p <- grid.arrange(grobs=KMPlotList, ncol = 2)
-    
+    querysurvival$kmplotlist <- KMPlotList
     p
     
     
   }, width=680, height=ceiling(plotHeight.KM()/2)*350)
   
+  ###
+  output$query_survival_km_downbttn_csv <- renderUI({
+    req(querysurvival$kmplotlist)
+    downloadBttn(
+      outputId = "query.survival.km.downbttn.csv",
+      label = 'CSV',
+      style = "jelly",
+      color = "success", 
+      size = 'xs'
+    )
+  })
+  
+  output$query_survival_km_downbttn_pdf <- renderUI({
+    req(querysurvival$kmplotlist)
+    downloadBttn(
+      outputId = "query.survival.km.downbttn.pdf",
+      label = 'PDF',
+      style = "jelly",
+      color = "success",
+      size = 'xs'
+    )
+  })
+  
+  output$query.survival.km.downbttn.csv <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'Surival_Data.csv', sep = '_')},
+    
+    content = function(file){
+      write.csv(querysurvival$data, file, row.names = FALSE, quote = F)
+    })
+  
+  output$query.survival.km.downbttn.pdf <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'KM_Plot.pdf', sep = '_')},
+    
+    content = function(file){
+      pdf(file, width = 9.6, height = (ceiling(plotHeight.KM()/2)*350/70))
+      grid.arrange(grobs=querysurvival$kmplotlist, ncol = 2)
+      dev.off()
+    })
+  
+  
   
   ### Single Cell
+  
+  querysinglecell <- reactiveValues()
   
   dataForTSNEPlot <- reactive({
 
@@ -493,7 +645,11 @@ server <- function(input, output, session) {
     }
     
     dataForTSNEPlot <- dataForTSNEPlot()
+    dataForTSNEPlot2 <- dataForTSNEPlot[,-4]
+    querysinglecell$tsnedata <- dataForTSNEPlot2
+    
     p <- scTSNEPlotFun(dataForTSNEPlot, expr=FALSE)
+    querysinglecell$tsneplot <- p
     p
     
   })
@@ -510,7 +666,10 @@ server <- function(input, output, session) {
     }
     
     dataForTSNEPlot <- dataForTSNEPlot()
+    querysinglecell$tsneexprdata <- dataForTSNEPlot
+    
     p <- scTSNEPlotFun(dataForTSNEPlot, expr=TRUE)
+    querysinglecell$tsneexprplot <- p
     p
     
   })
@@ -528,7 +687,11 @@ server <- function(input, output, session) {
     }
     
     dataForUMAPPlot <- dataForUMAPPlot()
+    dataForUMAPPlot2 <- dataForUMAPPlot[,-4]
+    querysinglecell$umapdata <- dataForUMAPPlot2
+    
     p <- scUMAPPlotFun(dataForUMAPPlot, expr=FALSE)
+    querysinglecell$umapplot <- p
     p
     
   })
@@ -545,10 +708,172 @@ server <- function(input, output, session) {
     }
     
     dataForUMAPPlot <- dataForUMAPPlot()
+    querysinglecell$umapexprdata <- dataForUMAPPlot
+    
     p <- scUMAPPlotFun(dataForUMAPPlot, expr=TRUE)
+    querysinglecell$umapexprplot <- p
     p
     
   })
+  
+  
+  ###
+  output$query_sc_tsne_downbttn_csv <- renderUI({
+    req(querysinglecell$tsneplot)
+    downloadBttn(
+      outputId = "query.sc.tsne.downbttn.csv",
+      label = 'CSV',
+      style = "jelly",
+      color = "success", 
+      size = 'xs'
+    )
+  })
+  
+  output$query_sc_tsne_downbttn_pdf <- renderUI({
+    req(querysinglecell$tsneplot)
+    downloadBttn(
+      outputId = "query.sc.tsne.downbttn.pdf",
+      label = 'PDF',
+      style = "jelly",
+      color = "success",
+      size = 'xs'
+    )
+  })
+  
+  output$query.sc.tsne.downbttn.csv <- downloadHandler(
+    filename = function(){paste('tSNE_Plot_Data.csv', sep = '_')},
+    
+    content = function(file){
+      write.csv(querysinglecell$tsnedata, file, row.names = FALSE, quote = F)
+    })
+  
+  output$query.sc.tsne.downbttn.pdf <- downloadHandler(
+    filename = function(){paste('tSNE_Plot.pdf', sep = '_')},
+    
+    content = function(file){
+      pdf(file, width = 6, height = 5)
+      print (querysinglecell$tsneplot)
+      dev.off()
+    })
+  
+  ###
+  output$query_sc_umap_downbttn_csv <- renderUI({
+    req(querysinglecell$umapplot)
+    downloadBttn(
+      outputId = "query.sc.umap.downbttn.csv",
+      label = 'CSV',
+      style = "jelly",
+      color = "success", 
+      size = 'xs'
+    )
+  })
+  
+  output$query_sc_umap_downbttn_pdf <- renderUI({
+    req(querysinglecell$umapplot)
+    downloadBttn(
+      outputId = "query.sc.umap.downbttn.pdf",
+      label = 'PDF',
+      style = "jelly",
+      color = "success",
+      size = 'xs'
+    )
+  })
+  
+  output$query.sc.umap.downbttn.csv <- downloadHandler(
+    filename = function(){paste('UMAP_Plot_Data.csv', sep = '_')},
+    
+    content = function(file){
+      write.csv(querysinglecell$umapdata, file, row.names = FALSE, quote = F)
+    })
+  
+  output$query.sc.umap.downbttn.pdf <- downloadHandler(
+    filename = function(){paste('UMAP_Plot.pdf', sep = '_')},
+    
+    content = function(file){
+      pdf(file, width = 6, height = 5)
+      print (querysinglecell$umapplot)
+      dev.off()
+    })
+  
+  
+  ###
+  output$query_sc_tsne_expr_downbttn_csv <- renderUI({
+    req(querysinglecell$tsneexprplot)
+    downloadBttn(
+      outputId = "query.sc.tsne.expr.downbttn.csv",
+      label = 'CSV',
+      style = "jelly",
+      color = "success", 
+      size = 'xs'
+    )
+  })
+  
+  output$query_sc_tsne_expr_downbttn_pdf <- renderUI({
+    req(querysinglecell$tsneexprplot)
+    downloadBttn(
+      outputId = "query.sc.tsne.expr.downbttn.pdf",
+      label = 'PDF',
+      style = "jelly",
+      color = "success",
+      size = 'xs'
+    )
+  })
+  
+  output$query.sc.tsne.expr.downbttn.csv <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'Expression_tSNE_Data.csv', sep = '_')},
+    
+    content = function(file){
+      write.csv(querysinglecell$tsneexprdata, file, row.names = FALSE, quote = F)
+    })
+  
+  output$query.sc.tsne.expr.downbttn.pdf <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'Expression_tSNE_Plot.pdf', sep = '_')},
+    
+    content = function(file){
+      pdf(file, width = 6, height = 5)
+      print (querysinglecell$tsneexprplot)
+      dev.off()
+    })
+  
+  ###
+  output$query_sc_umap_expr_downbttn_csv <- renderUI({
+    req(querysinglecell$umapexprplot)
+    downloadBttn(
+      outputId = "query.sc.umap.expr.downbttn.csv",
+      label = 'CSV',
+      style = "jelly",
+      color = "success", 
+      size = 'xs'
+    )
+  })
+  
+  output$query_sc_umap_expr_downbttn_pdf <- renderUI({
+    req(querysinglecell$umapexprplot)
+    downloadBttn(
+      outputId = "query.sc.umap.expr.downbttn.pdf",
+      label = 'PDF',
+      style = "jelly",
+      color = "success",
+      size = 'xs'
+    )
+  })
+  
+  output$query.sc.umap.expr.downbttn.csv <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'Expression_UMAP_Data.csv', sep = '_')},
+    
+    content = function(file){
+      write.csv(querysinglecell$umapexprdata, file, row.names = FALSE, quote = F)
+    })
+  
+  output$query.sc.umap.expr.downbttn.pdf <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'Expression_UMAP_Plot.pdf', sep = '_')},
+    
+    content = function(file){
+      pdf(file, width = 6, height = 5)
+      print (querysinglecell$umapexprplot)
+      dev.off()
+    })
+  
   
   
   output$henry_sc_bubble <- renderPlot({
@@ -567,10 +892,52 @@ server <- function(input, output, session) {
                 mean.expressed=ifelse(sum(expr>0)>0, sum(expr)/sum(expr>0), 0),
                 percent.expressed=sum(expr>0)/length(expr)*100)
     
+    querysinglecell$bubbledata <- dataForBubblePlot
+    
     p <- scBubblePlotFun(dataForBubblePlot)
+    querysinglecell$bubbleplot <- p
     p
     
   })
+  
+  ###
+  output$query_sc_bubble_downbttn_csv <- renderUI({
+    req(querysinglecell$bubbleplot)
+    downloadBttn(
+      outputId = "query.sc.bubble.downbttn.csv",
+      label = 'CSV',
+      style = "jelly",
+      color = "success", 
+      size = 'xs'
+    )
+  })
+  
+  output$query_sc_bubble_downbttn_pdf <- renderUI({
+    req(querysinglecell$bubbleplot)
+    downloadBttn(
+      outputId = "query.sc.bubble.downbttn.pdf",
+      label = 'PDF',
+      style = "jelly",
+      color = "success",
+      size = 'xs'
+    )
+  })
+  
+  output$query.sc.bubble.downbttn.csv <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'Bubble_Plot_Data.csv', sep = '_')},
+    
+    content = function(file){
+      write.csv(querysinglecell$bubbledata, file, row.names = FALSE, quote = F)
+    })
+  
+  output$query.sc.bubble.downbttn.pdf <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'Bubble_Plot.pdf', sep = '_')},
+    
+    content = function(file){
+      pdf(file, width = 12, height = 5)
+      print (querysinglecell$bubbleplot)
+      dev.off()
+    })
   
   
   output$henry_sc_violin <- renderPlot({
@@ -585,95 +952,167 @@ server <- function(input, output, session) {
     }
     
     dataForViolinPlot <- dataForTSNEPlot()
+    querysinglecell$violindata <- dataForViolinPlot
+    
     p <- scViolinPlotFun(dataForViolinPlot)
+    querysinglecell$violinplot <- p
     p
     
   })
+  
+  ###
+  output$query_sc_violin_downbttn_csv <- renderUI({
+    req(querysinglecell$violinplot)
+    downloadBttn(
+      outputId = "query.sc.violin.downbttn.csv",
+      label = 'CSV',
+      style = "jelly",
+      color = "success", 
+      size = 'xs'
+    )
+  })
+  
+  output$query_sc_violin_downbttn_pdf <- renderUI({
+    req(querysinglecell$violinplot)
+    downloadBttn(
+      outputId = "query.sc.violin.downbttn.pdf",
+      label = 'PDF',
+      style = "jelly",
+      color = "success",
+      size = 'xs'
+    )
+  })
+  
+  output$query.sc.violin.downbttn.csv <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'Violin_Plot_Data.csv', sep = '_')},
+    
+    content = function(file){
+      write.csv(querysinglecell$violindata, file, row.names = FALSE, quote = F)
+    })
+  
+  output$query.sc.violin.downbttn.pdf <- downloadHandler(
+    filename = function(){paste(gene.id, gene.symbol, 'Violin_Plot.pdf', sep = '_')},
+    
+    content = function(file){
+      pdf(file, width = 12, height = 5)
+      print (querysinglecell$violinplot)
+      dev.off()
+    })
+  
+  
+
+  
+  
 })
+  
   
   
   ############################################################
   ###                 Prognostic Signatures                ###
   ############################################################
   
-  observeEvent(input$overview.signature, {
+  # observeEvent(input$overview.signature, {
+  #   
+  #   output$signature.gene.list <- DT::renderDataTable({
+  #     
+  #     .idx <- which(pca.signatures$Signature==input$overview.signature)
+  #     signature.table <- pca.signatures[.idx,-1]
+  #     signature.table
+  #     
+  #   }, 
+  #   callback=table.download.button,
+  #   options = list(#pageLength = 1000, 
+  #     dom = 'lfrtBp', buttons = c('copy', 'csv', 'excel')), #i
+  #   extensions = "Buttons",
+  #   selection = list(mode='none', selected=1), ### === not selectable
+  #   rownames = FALSE,
+  #   server = FALSE
+  #   )
+  #   
+  #   
+  # })
+  
+  
+  
+  output$signature.gene.list <- DT::renderDataTable({
     
-    req(input$overview.signature)
+    .idx <- which(pca.signatures$Signature==input$overview.signature)
+    signature.table <- pca.signatures[.idx,-1]
+    signature.table
     
-    output$signature.gene.list <- DT::renderDataTable({
-      
-      .idx <- which(pca.signatures$Signature==input$overview.signature)
-      signature.table <- pca.signatures[.idx,-1]
-      signature.table
-      
-    }, 
-    callback=table.download.button,
-    options = list(#pageLength = 1000, 
-      dom = 'lfrtBp', buttons = c('copy', 'csv', 'excel')), #i
-    extensions = "Buttons",
-    selection = list(mode='none', selected=1), ### === not selectable
-    rownames = FALSE,
-    server = FALSE
-    )
-    
-    
-  })
+  }, 
+  callback=table.download.button,
+  options = list(#pageLength = 1000, 
+    dom = 'lfrtBp', buttons = c('copy', 'csv', 'excel')), #i
+  extensions = "Buttons",
+  selection = list(mode='none', selected=1), ### === not selectable
+  rownames = FALSE,
+  server = FALSE
+  )
   
   
   ##########
   
-  de.signature.table <- reactive({
-    
-    signature.summ <- pca.signatures %>% group_by(Ensembl.ID) %>%
-      summarise(Count=length(Signature), 
-                Signatures=paste(Signature, collapse = '; '),
-                Symbol=HGNC.Symbol[1])
-    
-    signature.summ <- data.frame(signature.summ, stringsAsFactors = F)
-    
-    dataset <- input$de.dataset
-    
-    idx <- which(meta.data[[dataset]]$sample_type %in% c('Tumor','Primary','Normal'))
-    
-    expr <- expr.data[[dataset]][,idx]
-    
-    deg.group <- ifelse(meta.data[[dataset]]$sample_type[idx]=='Normal','Normal','Primary')
-    deg.group <- factor(deg.group, levels=c('Normal','Primary'))
-    
-    design <- model.matrix(~0+deg.group)
-    colnames(design) <- levels(deg.group)
-    
-    contrast.matrix <- makeContrasts(contrasts='Primary - Normal',
-                                     levels=design)
-    
-    ### Differential gene expression analysis (limma)
-    
-    fit <- lmFit(expr, design)
-    fit2 <- contrasts.fit(fit, contrast.matrix)
-    fit2 <- eBayes(fit2)
-    
-    dgeTable <- topTable(fit2, coef=1, n=Inf, adjust.method='BH', sort.by='p')
-    dgeTable <- dgeTable[signature.summ$Ensembl.ID,]
-    
-    dgeTable$Symbol <- signature.summ$Symbol
-    dgeTable$Signature.Count <- signature.summ$Count
-    dgeTable$Signatures <- signature.summ$Signatures
-    
-    dgeTable <- dgeTable[order(dgeTable$adj.P.Val, decreasing = F),]
-    
-    dgeTable
-    
-  })
+  # signature.summ <- pca.signatures %>% group_by(Ensembl.ID) %>%
+  #   summarise(Count=length(Signature), 
+  #             Signatures=paste(Signature, collapse = '; '),
+  #             Symbol=HGNC.Symbol[1])
+  # 
+  # signature.summ <- data.frame(signature.summ, stringsAsFactors = F)
+  # 
+  # 
+  # de.signature.table <- reactive({
+  #   
+  #   dataset <- input$de.dataset
+  #   
+  #   idx <- which(meta.data[[dataset]]$sample_type %in% c('Tumor','Primary','Normal'))
+  #   
+  #   expr <- expr.data[[dataset]][,idx]
+  #   
+  #   deg.group <- ifelse(meta.data[[dataset]]$sample_type[idx]=='Normal','Normal','Primary')
+  #   deg.group <- factor(deg.group, levels=c('Normal','Primary'))
+  #   
+  #   design <- model.matrix(~0+deg.group)
+  #   colnames(design) <- levels(deg.group)
+  #   
+  #   contrast.matrix <- makeContrasts(contrasts='Primary - Normal',
+  #                                    levels=design)
+  #   
+  #   ### Differential gene expression analysis (limma)
+  #   
+  #   fit <- lmFit(expr, design)
+  #   fit2 <- contrasts.fit(fit, contrast.matrix)
+  #   fit2 <- eBayes(fit2)
+  #   
+  #   dgeTable <- topTable(fit2, coef=1, n=Inf, adjust.method='BH', sort.by='p')
+  #   dgeTable <- dgeTable[signature.summ$Ensembl.ID,]
+  #   
+  #   dgeTable$Symbol <- signature.summ$Symbol
+  #   dgeTable$Signature.Count <- signature.summ$Count
+  #   dgeTable$Signatures <- signature.summ$Signatures
+  #   
+  #   dgeTable <- dgeTable[order(dgeTable$adj.P.Val, decreasing = F),]
+  #   
+  #   dgeTable
+  #   
+  # })
   
   shinyjs::hide('signature.de.list')
   shinyjs::hide('signature.de.volcano')
   
+  signaturedge <- reactiveValues()
+  
   output$signature.de.list <- DT::renderDataTable({
-    dgeTable <- de.signature.table()
+    #dgeTable <- de.signature.table()
+    dgeTable <- signature.deg[[input$de.dataset]]
     dgeTable[,c(1,2,3,6)] <- apply(dgeTable[,c(1,2,3,6)], 2, function(v) round(v,3))
     dgeTable[,c(4,5)] <- apply(dgeTable[,c(4,5)], 2, function(v) format(as.numeric(v), digits=3))
     
+    signaturedge$data <- dgeTable
+    
     dgeTable
+    
+    
     
   }, 
   callback=table.download.button,
@@ -688,7 +1127,9 @@ server <- function(input, output, session) {
   
   output$signature.de.volcano <- renderPlot({
     
-    dataForVolcanoPlot <- de.signature.table()
+    #dataForVolcanoPlot <- de.signature.table()
+    
+    dataForVolcanoPlot <- signature.deg[[input$de.dataset]]
     
     logFcThreshold <- 1
     adjPvalThreshold <- 0.01
@@ -701,6 +1142,7 @@ server <- function(input, output, session) {
                                          logFC <= -logFcThreshold & adj.P.Val <= adjPvalThreshold)] <- 'DOWN'
     
     p <- DEvolcanoPlotFun(dataForVolcanoPlot, logFcThreshold, adjPvalThreshold)
+    signaturedge$plot <- p
     p
     
   })
@@ -708,7 +1150,44 @@ server <- function(input, output, session) {
   shinyjs::show('signature.de.list')
   shinyjs::show('signature.de.volcano')
   
+  ###
+  output$signature_volcano_downbttn_csv <- renderUI({
+    req(signaturedge$plot)
+    downloadBttn(
+      outputId = "signature.volcano.downbttn.csv",
+      label = 'CSV',
+      style = "jelly",
+      color = "success", 
+      size = 'xs'
+    )
+  })
   
+  output$signature_volcano_downbttn_pdf <- renderUI({
+    req(signaturedge$plot)
+    downloadBttn(
+      outputId = "signature.volcano.downbttn.pdf",
+      label = 'PDF',
+      style = "jelly",
+      color = "success",
+      size = 'xs'
+    )
+  })
+  
+  output$signature.volcano.downbttn.csv <- downloadHandler(
+    filename = function(){paste(input$bcr.dataset.input, 'Differential_Expression_Signature_Genes.csv', sep = '_')},
+    
+    content = function(file){
+      write.csv(signaturedge$data, file, row.names = FALSE, quote = F)
+    })
+  
+  output$signature.volcano.downbttn.pdf <- downloadHandler(
+    filename = function(){paste(input$bcr.dataset.input, 'Differential_Expression_Volcano_Plot.pdf', sep = '_')},
+    
+    content = function(file){
+      pdf(file, width = 6, height = 6)
+      print (signaturedge$plot)
+      dev.off()
+    })
   
   
   ###
@@ -824,13 +1303,18 @@ server <- function(input, output, session) {
   #   
   # })
   
+  signaturesurvival <- reactiveValues()
+  
   output$signature.bcr.forest <- renderPlot({
     
     dataForForestPlot <- bcr.signature.table()
     dataForForestPlot$Gene <- as.character(dataForForestPlot$Symbol)
     dataForForestPlot <- dataForForestPlot[which(dataForForestPlot$Signature.Count>=3 & !is.na(dataForForestPlot$HR)),]
     
+    signaturesurvival$data <- dataForForestPlot
+    
     p <- signatureKMForestplotFunT(dataForForestPlot)
+    signaturesurvival$plot <- p
     p
     
   })
@@ -841,6 +1325,48 @@ server <- function(input, output, session) {
   shinyjs::show('signature.bcr.forest')
   #shinyjs::show('signature.bcr.volcano')
   
+  
+  ###
+  output$signature_survival_forest_downbttn_csv <- renderUI({
+    req(signaturesurvival$plot)
+    downloadBttn(
+      outputId = "signature.survival.forest.downbttn.csv",
+      label = 'CSV',
+      style = "jelly",
+      color = "success", 
+      size = 'xs'
+    )
+  })
+  
+  output$signature_survival_forest_downbttn_pdf <- renderUI({
+    req(signaturesurvival$plot)
+    downloadBttn(
+      outputId = "signature.survival.forest.downbttn.pdf",
+      label = 'PDF',
+      style = "jelly",
+      color = "success",
+      size = 'xs'
+    )
+  })
+  
+  output$signature.survival.forest.downbttn.csv <- downloadHandler(
+    filename = function(){paste(input$bcr.dataset.input, 'KM_Survival_Analysis_Forest_Plot_Data_Signature_Genes.csv', sep = '_')},
+    
+    content = function(file){
+      write.csv(signaturesurvival$data, file, row.names = FALSE, quote = F)
+    })
+  
+  output$signature.survival.forest.downbttn.pdf <- downloadHandler(
+    filename = function(){paste(input$bcr.dataset.input, 'KM_Survival_Analysis_Forest_Plot_Signature_Genes.pdf', sep = '_')},
+    
+    content = function(file){
+      pdf(file, width = 9, height = 18)
+      print (signaturesurvival$plot)
+      dev.off()
+    })
+  
+  
+  signatureenrichment <- reactiveValues()
   
   observe({
     req(input$signature.pathway.input, input$signature.ontology.input)
@@ -861,9 +1387,19 @@ server <- function(input, output, session) {
       if (nrow(enrich.table)==0) {
         shinyjs::hide('signature_enrichment_bar_plot')
         shinyjs::hide('signature_enrichment_bubble_plot')
+        
+        shinyjs::hide('signature_enrichment_barplot_downbttn_csv')
+        shinyjs::hide('signature_enrichment_barplot_downbttn_pdf')
+        shinyjs::hide('signature_enrichment_bubble_downbttn_csv')
+        shinyjs::hide('signature_enrichment_bubble_downbttn_pdf')
       } else {
         shinyjs::show('signature_enrichment_bar_plot')
         shinyjs::show('signature_enrichment_bubble_plot')
+        
+        shinyjs::show('signature_enrichment_barplot_downbttn_csv')
+        shinyjs::show('signature_enrichment_barplot_downbttn_pdf')
+        shinyjs::show('signature_enrichment_bubble_downbttn_csv')
+        shinyjs::show('signature_enrichment_bubble_downbttn_pdf')
       }
       
       if (nrow(enrich.table)>0) {
@@ -919,40 +1455,56 @@ server <- function(input, output, session) {
       dataForBarPlot$Count <- as.numeric(dataForBarPlot$Count)
       dataForBarPlot$Fold.Enrichment <- as.numeric(dataForBarPlot$Fold.Enrichment)
       
+      signatureenrichment$bardata <- dataForBarPlot
+      
       if (nrow(dataForBarPlot)>30) {
         dataForBarPlot <- dataForBarPlot[1:30,]
       }
       
       p <- EnrichmentBarPlotFun(dataForBarPlot)
+      signatureenrichment$barplot <- p
       p
       
     }, width = 800, height = plotHeight.Enrich.Bar())
     
+    ###
+    output$signature_enrichment_barplot_downbttn_csv <- renderUI({
+      req(signatureenrichment$barplot)
+      downloadBttn(
+        outputId = "signature.enrichment.barplot.downbttn.csv",
+        label = 'CSV',
+        style = "jelly",
+        color = "success", 
+        size = 'xs'
+      )
+    })
     
-    # output$enrich.bar.downbttn.csv <- downloadHandler(
-    #   filename = function(){paste('enrich.bar.csv', sep = '')},
-    #   
-    #   content = function(file){
-    #     write.csv(transcriptome.enrich$enrich.bar.data, file, row.names = FALSE, quote = F)
-    #   })
-    # 
-    # output$enrich.bar.downbttn.png <- downloadHandler(
-    #   filename = function(){paste('enrich.bar.png', sep = '')},
-    #   
-    #   content = function(file){
-    #     png(file, width = 1000, height = 700)
-    #     print(transcriptome.enrich$enrich.bar.plot)
-    #     dev.off()
-    #   })
+    output$signature_enrichment_barplot_downbttn_pdf <- renderUI({
+      req(signatureenrichment$barplot)
+      downloadBttn(
+        outputId = "signature.enrichment.barplot.downbttn.pdf",
+        label = 'PDF',
+        style = "jelly",
+        color = "success",
+        size = 'xs'
+      )
+    })
     
-    # output$enrich.bar.downbttn.pdf <- downloadHandler(
-    #   filename = function(){paste('enrich.bar.pdf', sep = '')},
-    #   
-    #   content = function(file){
-    #     pdf(file, width = 10, height = 7)
-    #     print(transcriptome.enrich$enrich.bar.plot)
-    #     dev.off()
-    #   })
+    output$signature.enrichment.barplot.downbttn.csv <- downloadHandler(
+      filename = function(){paste(input$signature.pathway.input, input$signature.ontology.input, 'Enrichment_Analysis_Bar_Plot_Data.csv', sep = '_')},
+      
+      content = function(file){
+        write.csv(signatureenrichment$bardata, file, row.names = FALSE, quote = F)
+      })
+    
+    output$signature.enrichment.barplot.downbttn.pdf <- downloadHandler(
+      filename = function(){paste(input$signature.pathway.input, input$signature.ontology.input, 'Enrichment_Analysis_Bar_Plot.pdf', sep = '_')},
+      
+      content = function(file){
+        pdf(file, width = 9.5, height = plotHeight.Enrich.Bar()/70)
+        print (signatureenrichment$barplot)
+        dev.off()
+      })
     
     
     output$signature_enrichment_bubble_plot <- renderPlot({
@@ -964,14 +1516,57 @@ server <- function(input, output, session) {
       dataForBubblePlot$Count <- as.numeric(dataForBubblePlot$Count)
       dataForBubblePlot$Fold.Enrichment <- as.numeric(dataForBubblePlot$Fold.Enrichment)
       
+      signatureenrichment$bubbledata <- dataForBubblePlot
+      
       if (nrow(dataForBubblePlot)>30) {
         dataForBubblePlot <- dataForBubblePlot[1:30,]
       }
       
       p <- EnrichmentBubblePlotFun(dataForBubblePlot)
+      signatureenrichment$bubbleplot <- p
       p
       
     }, width = 800, height = plotHeight.Enrich.Bubble())
+    
+    
+    ###
+    output$signature_enrichment_bubble_downbttn_csv <- renderUI({
+      req(signatureenrichment$bubbleplot)
+      downloadBttn(
+        outputId = "signature.enrichment.bubble.downbttn.csv",
+        label = 'CSV',
+        style = "jelly",
+        color = "success", 
+        size = 'xs'
+      )
+    })
+    
+    output$signature_enrichment_bubble_downbttn_pdf <- renderUI({
+      req(signatureenrichment$bubbleplot)
+      downloadBttn(
+        outputId = "signature.enrichment.bubble.downbttn.pdf",
+        label = 'PDF',
+        style = "jelly",
+        color = "success",
+        size = 'xs'
+      )
+    })
+    
+    output$signature.enrichment.bubble.downbttn.csv <- downloadHandler(
+      filename = function(){paste(input$signature.pathway.input, input$signature.ontology.input, 'Enrichment_Analysis_Bubble_Plot_Data.csv', sep = '_')},
+      
+      content = function(file){
+        write.csv(signatureenrichment$bubbledata, file, row.names = FALSE, quote = F)
+      })
+    
+    output$signature.enrichment.bubble.downbttn.pdf <- downloadHandler(
+      filename = function(){paste(input$signature.pathway.input, input$signature.ontology.input, 'Enrichment_Analysis_Bubble_Plot.pdf', sep = '_')},
+      
+      content = function(file){
+        pdf(file, width = 9.5, height = plotHeight.Enrich.Bubble()/70)
+        print (signatureenrichment$bubbleplot)
+        dev.off()
+      })
     
   })
   
@@ -1423,8 +2018,6 @@ server <- function(input, output, session) {
       
     })
     
-    
-    
     output$transcriptome_dataset_summary <- renderText({ 
       transcriptome_dataset_summary <- as.character(paste0(datasets[transcriptome_dataset_idx,'Dataset'], ': ', 
                                                            datasets[transcriptome_dataset_idx,'Title']))
@@ -1488,6 +2081,10 @@ server <- function(input, output, session) {
     
     
     output$transcriptome_km_bcr_time <- renderPlotly({
+      
+      if (transcriptome_dataset_idx>10) {
+        return ()
+      }
       
       keep <- which(meta$sample_type=='Tumor' | meta$sample_type=='Primary')
       
@@ -1656,7 +2253,7 @@ server <- function(input, output, session) {
     colnames(deg.groups) <- c('Control','Case','Groups','N')
     
     output$transcriptome.groups <- DT::renderDataTable(deg.groups, rownames = FALSE, escape = FALSE, selection = 'none', server = FALSE,
-                                                       options=list(dom = 'tp', paging = TRUE, pageLength = 100, #ordering = FALSE,
+                                                       options=list(dom = 'tp', paging = TRUE, pageLength = 100, ordering = FALSE,
                                                                     initComplete = JS("
                                                                                       function(setting, json) {
                                                                                       $(this.api().table().container())
@@ -1692,8 +2289,11 @@ server <- function(input, output, session) {
     
     shinyjs::hide('transcriptome_deg_table')
     shinyjs::hide('transcriptome_volcano_plot')
-    # shinyjs::hide('volcano.ccma.downbttn.csv')
-    # shinyjs::hide('volcano.ccma.downbttn.pdf')
+    
+    shinyjs::hide('transcriptome_volcano_downbttn_csv')
+    shinyjs::hide('transcriptome_volcano_downbttn_pdf')
+    
+    transcriptomedge <- reactiveValues()
     
     observeEvent(input$deg_submit, {
       
@@ -1765,46 +2365,60 @@ server <- function(input, output, session) {
       
       shinyjs::show('transcriptome_deg_table')
       shinyjs::show('transcriptome_volcano_plot')
-      # shinyjs::show('volcano.ccma.downbttn.csv')
-      # shinyjs::show('volcano.ccma.downbttn.pdf')
-      # 
-      #volcano <- reactiveValues()
       
       output$transcriptome_volcano_plot <- renderPlot({
         
         p <- volcanoPlotFun(dataForVolcanoPlot, logFcThreshold, adjPvalThreshold)
         
-        #volcano$volcano.data <- dataForVolcanoPlot
-        #volcano$volcano.plot <- p
+        transcriptomedge$data <- dataForVolcanoPlot
+        transcriptomedge$plot <- p
         
         p
         
       })
       
-      # output$volcano.ccma.downbttn.csv <- downloadHandler(
-      #   filename = function(){paste('volcano.csv', sep = '')},
-      #   
-      #   content = function(file){
-      #     write.csv(ccma.volcano$volcano.data, row.names = FALSE, quote = F)
-      #   })
-      # 
-      # output$volcano.ccma.downbttn.png <- downloadHandler(
-      #   filename = function(){paste('volcano.png', sep = '')},
-      #   
-      #   content = function(file){
-      #     png(file, width = 600, height = 600)
-      #     print(ccma.volcano$volcano.plot)
-      #     dev.off()
-      #   })
-      # 
-      # output$volcano.ccma.downbttn.pdf <- downloadHandler(
-      #   filename = function(){paste('volcano.pdf', sep = '')},
-      #   
-      #   content = function(file){
-      #     pdf(file, width = 6, height = 6)
-      #     print(ccma.volcano$volcano.plot)
-      #     dev.off()
-      #   })
+      ###
+      
+      shinyjs::show('transcriptome_volcano_downbttn_csv')
+      shinyjs::show('transcriptome_volcano_downbttn_pdf')
+      
+      output$transcriptome_volcano_downbttn_csv <- renderUI({
+        req(transcriptomedge$plot)
+        downloadBttn(
+          outputId = "transcriptome.volcano.downbttn.csv",
+          label = 'CSV',
+          style = "jelly",
+          color = "success", 
+          size = 'xs'
+        )
+      })
+      
+      output$transcriptome_volcano_downbttn_pdf <- renderUI({
+        req(transcriptomedge$plot)
+        downloadBttn(
+          outputId = "transcriptome.volcano.downbttn.pdf",
+          label = 'PDF',
+          style = "jelly",
+          color = "success",
+          size = 'xs'
+        )
+      })
+      
+      output$transcriptome.volcano.downbttn.csv <- downloadHandler(
+        filename = function(){paste(project, 'Differential_Expression_Transcriptome.csv', sep = '_')},
+        
+        content = function(file){
+          write.csv(transcriptomedge$data, file, row.names = FALSE, quote = F)
+        })
+      
+      output$transcriptome.volcano.downbttn.pdf <- downloadHandler(
+        filename = function(){paste(project, 'Differential_Expression_Transcriptome_Volcano_Plot.pdf', sep = '_')},
+        
+        content = function(file){
+          pdf(file, width = 6, height = 6)
+          print (transcriptomedge$plot)
+          dev.off()
+        })
       
       
       output$transcriptome_deg_table <- DT::renderDataTable({
@@ -1825,6 +2439,7 @@ server <- function(input, output, session) {
       )
       
     })
+    
     
     
     ### Survival Analysis
@@ -1894,12 +2509,13 @@ server <- function(input, output, session) {
       shinyalert(text=paste0('Relapse-free survival (RFS) data is not available for the selected dataset: ', project));
     }
     
+    
     observeEvent(input$surv_submit, {
       
-      # if(! project %in% bcr.dataset) {
-      #   shinyalert(text=paste0('RFS data is not available for the selected dataset: ', project));
-      #   return()
-      # }
+      if(! project %in% bcr.dataset) {
+        #shinyalert(text=paste0('RFS data is not available for the selected dataset: ', project));
+        return()
+      }
       
       genes <- gsub('^\\s+|\\s+$|,$|;$', '', input$surv_gene_input)
       genes <- gsub('\\s*;\\s*', ';', genes)
@@ -1965,6 +2581,7 @@ server <- function(input, output, session) {
       server = FALSE
       )
       
+      transcriptomesurvival <- reactiveValues()
       
       output$training_km_plot <- renderPlot({
         
@@ -1979,12 +2596,57 @@ server <- function(input, output, session) {
                                     bcr.status=as.numeric(training.pheno$bcr_status),
                                     stringsAsFactors = F)
         
+        dataForKMPlot2 <- data.frame(sample=rownames(training.pheno),
+                                     dataForKMPlot, stringsAsFactors = F)
+        colnames(dataForKMPlot2)[2] <- 'risk.score'
+        
+        transcriptomesurvival$kmdata <- dataForKMPlot2
         
         p <- KMPlotFun(dataForKMPlot, score.type='risk', x.adjust=-0.05, dt=NULL)
-        
+        transcriptomesurvival$kmplot <- p
         p
         
       })
+      
+      
+      ###
+      output$transcriptome_survival_km_downbttn_csv <- renderUI({
+        req(transcriptomesurvival$kmplot)
+        downloadBttn(
+          outputId = "transcriptome.survival.km.downbttn.csv",
+          label = 'CSV',
+          style = "jelly",
+          color = "success", 
+          size = 'xs'
+        )
+      })
+      
+      output$transcriptome_survival_km_downbttn_pdf <- renderUI({
+        req(transcriptomesurvival$kmplot)
+        downloadBttn(
+          outputId = "transcriptome.survival.km.downbttn.pdf",
+          label = 'PDF',
+          style = "jelly",
+          color = "success",
+          size = 'xs'
+        )
+      })
+      
+      output$transcriptome.survival.km.downbttn.csv <- downloadHandler(
+        filename = function(){paste(project, input$surv_model_method, 'Survival_Data.csv', sep = '_')},
+        
+        content = function(file){
+          write.csv(transcriptomesurvival$kmdata, file, row.names = FALSE, quote = F)
+        })
+      
+      output$transcriptome.survival.km.downbttn.pdf <- downloadHandler(
+        filename = function(){paste(project, input$surv_model_method, 'KM_Survival_Curve.pdf', sep = '_')},
+        
+        content = function(file){
+          pdf(file, width = 5, height = 5)
+          print(transcriptomesurvival$kmplot)
+          dev.off()
+        })
       
       
       kmTableVal <- reactive({
@@ -2058,6 +2720,7 @@ server <- function(input, output, session) {
         
       })
       
+      
       output$validation.bcr.forest <- renderPlot({
         
         if(length(keep) == 0) {
@@ -2065,10 +2728,53 @@ server <- function(input, output, session) {
         }
         
         dataForForestPlot <- kmTableVal()
+        transcriptomesurvival$kmtable <- dataForForestPlot
+        
         p <- transcriptomeKMForestplotFunT(dataForForestPlot, sort.var='P')
+        transcriptomesurvival$forestplot <- p
         p
         
       })
+      
+      
+      ###
+      output$transcriptome_survival_forest_downbttn_csv <- renderUI({
+        req(transcriptomesurvival$forestplot)
+        downloadBttn(
+          outputId = "transcriptome.survival.forest.downbttn.csv",
+          label = 'CSV',
+          style = "jelly",
+          color = "success", 
+          size = 'xs'
+        )
+      })
+      
+      output$transcriptome_survival_forest_downbttn_pdf <- renderUI({
+        req(transcriptomesurvival$forestplot)
+        downloadBttn(
+          outputId = "transcriptome.survival.forest.downbttn.pdf",
+          label = 'PDF',
+          style = "jelly",
+          color = "success",
+          size = 'xs'
+        )
+      })
+      
+      output$transcriptome.survival.forest.downbttn.csv <- downloadHandler(
+        filename = function(){paste(project, input$surv_model_method, 'KM_Forest_Plot.csv', sep = '_')},
+        
+        content = function(file){
+          write.csv(transcriptomesurvival$kmtable, file, row.names = FALSE, quote = F)
+        })
+      
+      output$transcriptome.survival.forest.downbttn.pdf <- downloadHandler(
+        filename = function(){paste(project, input$surv_model_method, 'KM_Forest_Plot.pdf', sep = '_')},
+        
+        content = function(file){
+          pdf(file, width = 12, height = 7.5)
+          print(transcriptomesurvival$forestplot)
+          dev.off()
+        })
       
       
     })

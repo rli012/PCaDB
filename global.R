@@ -27,6 +27,11 @@ col_fun = colorRampPalette(rev(c(cols[10],cols[1])), space = "Lab")(2)
 gene.annotation <- readRDS('data/PCaDB_Gene_Annotation.RDS')
 gene.annotation <- gene.annotation[-c(1:16),]
 
+idx1 <- which(gene.annotation$gene_biotype=='protein_coding')
+idx2 <- which(!1:nrow(gene.annotation) %in% idx1)
+gene.annotation <- gene.annotation[c(idx1,idx2),]
+
+
 gene.default <- 'ENSG00000142515' # KLK3
 
 datasets <- readRDS('data/PCaDB_Datasets.RDS')
@@ -132,13 +137,13 @@ sum(Signature.Gene.Quant$Freq>=3) # 40
 sum(Signature.Gene.Quant$Freq>=4) # 13
 
 signature.geneset <- list('Prognostic Signature'=signature.name,
-                          'Common Genes'=c('All (1032 Genes)',
-                                           '>= 2 Signatures (142 Genes)',
-                                           '>= 3 Signatures (40 Genes)',
-                                           '>= 4 Signatures (13 Genes)')
+                          'Common Genes'=c('All (1032 Genes)' = 'All_Signature_Genes',
+                                           '>= 2 Signatures (142 Genes)' = 'Common_2orMore',
+                                           '>= 3 Signatures (40 Genes)' = 'Common_3orMore',
+                                           '>= 4 Signatures (13 Genes)' = 'Common_4orMore')
 )
 
-signature.geneset.default <- '>= 3 Signatures (40 Genes)'
+signature.geneset.default <- 'Common_3orMore'
 
 signature.pathway.input <- selectizeInput(inputId = "signature.pathway.input", label=h5(strong('Select the Gene List:')),# h4(strong('miRNA'))
                                           choices = NULL, selected = signature.geneset.default, 
@@ -159,8 +164,9 @@ signature.ontology <- c('Kyoto Encyclopedia of Genes and Genomes (KEGG)' = 'KEGG
                'MSigDB - H:HALLMARK' = 'MSigDBHALLMARK',
                'MSigDB - C4:Cancer Gene Neighborhoods' = 'MSigDBC4CGN',
                'MSigDB - C4:Cancer Modules' = 'MSigDBC4CM',
-               'MSigDB - C6:Oncogenic Signatures' = 'MSigDBC6',
-               'MSigDB - C7:Immunologic Signatures' = 'MSigDBC7')
+               'MSigDB - C6:Oncogenic Signatures' = 'MSigDBC6'#,
+               #'MSigDB - C7:Immunologic Signatures' = 'MSigDBC7'
+               )
 
 signature.ontology.default <- signature.ontology[1]
 signature.ontology.input <- selectizeInput(inputId = "signature.ontology.input", label=h5(strong('Gene Sets:')),# h4(strong('miRNA'))
@@ -227,3 +233,8 @@ expr.data <- readRDS('data/PCaDB_Expression.UnCompressed.RDS')
 
 ##
 scDataHenry <<- readRDS('data/PCaDB_scDataHenry.UnCompressed.RDS')
+
+signature.deg <- readRDS('data/PCaDB_Signature_DEGs.RDS')
+
+
+

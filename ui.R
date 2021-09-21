@@ -17,6 +17,7 @@ library(shinyalert)
 #library(edgeR)
 #library(reshape2)
 #library(htmlwidgets) # JS
+library(shinyWidgets)
 library(DT) # formatStyle
 library(plotly)
 #library(ggrepel)
@@ -29,6 +30,7 @@ library(shinythemes)
 library(dashboardthemes)
 library(shinycssloaders)
 library(shinydisconnect)
+library(slickR)
 #library(shinybusy)
 #library(waiter)
 
@@ -204,7 +206,7 @@ gene.id <- selectizeInput(inputId = "gene.id", label=search.gene.label, #list(h4
                                          searchField = c('gene_name', 'alias_symbol', 'description', 'ensembl_id', 'entrez_id'),
                                          labelField = "gene_name",
                                          valueField = "ensembl_id",
-                                         #maxOptions = 5,
+                                         maxOptions = 30,
                                          render = I("{option: function(item, escape) {
                                                     var gene = '<div>' + '<strong>' + escape(item.gene_name) + '</strong>:' + '<ul>';
                                                     gene = gene + '<li>' + item.alias_symbol + '</li>';
@@ -278,19 +280,22 @@ tab_home <- fluidRow(
     title = NULL, solidHeader = TRUE, collapsible = FALSE,
     width = 12, # solidHeader=TRUE can remove the top boarder
     
-    h4(strong("Introduction")),
+    column(12,
+           
+    h3(strong("Introduction")),
     
-    h5(strong("Prostate cancer")),
+    h4(strong("Prostate cancer")),
     tags$p("Prostate cancer (PCa) is the second most frequently diagnosed cancer in men worldwide, 
            which accounts for 14.1% of the newly diagnosed cancer cases in 2020 [",
            a("GLOBOCAN", 
              href = "https://doi.org/10.3322/caac.21660",target='_blank'), ']. 
-           Localized PCa is a heterogeneous disease with highly variable clinical behaviors. 
-           Low-risk PCa usually grows slowly and men with indolent PCa may only require active surveillance, 
-           whereas many others with aggressive PCa require immediate local treatment such as radiotherapy or surgery. 
+           Localized PCa is a heterogeneous disease with highly variable clinical 
+           outcomes, which presents enormous challenges in the clinical management. 
+           The majority of patients with indolent PCa only require 
+           active surveillance, whereas patients with aggressive PCa require immediate local treatment. 
            Comprehensive collection of transcriptomics data from large population cohorts 
            is very critical for understanding the molecular biology of cancer, 
-           drug target identification and evaluation, 
+           drug target identification and evaluation, and 
            biomarker discovery for cancer diagnosis and prognosis, etc.', 
            style = "font-size: 120%;"),
     
@@ -298,16 +303,21 @@ tab_home <- fluidRow(
     
     #br(),
     tags$hr(style="border-top: 1px dashed #A9A9A9"),
-    h5(strong("About PCaDB")),
+    h4(strong("About PCaDB")),
     tags$p('PCaDB is a comprehensive and interactive database for transcriptomes from prostate cancer population cohorts. 
-           We collected 50 transcriptomics datasets with 7,231 samples from public data repositories, 
-           including TCGA, cBioPortal, GEO, and ArrayExpress. A standard bioinformatics pipeline is used to download and 
-           process the expression data and metadata.
-           PCaDB provides a user-friendly interface for the comprehensive analysis of individual 
-           genes, prognostic signatures, and the whole transcriptomes to elucidate the molecular 
-           heterogeneity in PCa, understand the mechanisms of tumor initiation and progression, 
-           as well as develop and validate prognostic signatures in large independent cohorts', 
+           We collected', strong('50 transcriptomics datasets'), 'with', strong('7,231 samples'), 'and', strong('a single-cell RNA-sequencing (scRNAseq) 
+           dataset'), 'with', strong('~ 30,000 cells'), 'for normal human prostates from public data repositories. We also included a comprehensive collection 
+           of', strong('30 published gene expression-based prognostic signatures'), 'in PCaDB.
+           A standard bioinformatics pipeline is developed to download and process the expression data and sample metadata of the transcriptomics datasets.', 
            style = "font-size: 120%;"),
+    
+    tags$p('PCaDB provides a user-friendly interface and a suite of data analysis and visualization modules for the comprehensive analysis of', strong('individual 
+           genes, prognostic signatures,'), 'and the', strong('whole transcriptomes'), 'to elucidate the molecular 
+           heterogeneity in PCa, understand the mechanisms of tumor initiation and progression, 
+           as well as develop and validate prognostic signatures in large independent cohorts.', 
+           style = "font-size: 120%;"),
+    
+    br(),
     
     # column(12, 
     #        tags$hr(style="border-top: 1px dashed #A9A9A9")
@@ -315,36 +325,26 @@ tab_home <- fluidRow(
     
     # actionLink("link_to_tab_query", tags$img(src='analysis.png', height=500)),
     
-    tags$img(src='img/analysis.png', height=500),
+    #tags$img(src='img/analysis.png', height=580),
     
+    #column(1),
+    withSpinner(slickROutput("slick_output", width = '100%'), type=8),
     
-    # column(12,
-    #        column(1),
-    #        column(4#,
-    #               #plotlyOutput('pie_sample_type_introduction', width='100%', height='300px')
-    #        ),
-    #        column(7)
-    # ),
-    
-    column(12,
-           #br(),
-           tags$hr(style="border-top: 1px dashed #A9A9A9")
-           ),
-    # br(),
-    # tags$hr(style="border-top: 1px dashed #A9A9A9"),
+    tags$hr(style="border-top: 1px dashed #A9A9A9"),
     
     h5(strong("Citation")),
     tags$p('Please cite the following publication:
-           Li,R. and Jia,Z. (2021) PCaDB - a comprehensive and interactive database for transcriptomes from prostate cancer population cohorts. bioRxiv, 10.1101/2021.06.29.449134.', 
+           Li, R., Zhu,J., Zhong, W.-D., and Jia, Z. (2021) PCaDB - a comprehensive and interactive database for transcriptomes from prostate cancer population cohorts. bioRxiv, 10.1101/2021.06.29.449134.', 
            style = "font-size: 120%;"),
     tags$p(HTML("<a href='https://doi.org/10.1101/2021.06.29.449134' target='_blank'><h5>https://doi.org/10.1101/2021.06.29.449134</h5></a>")),
     br(),
-    tags$p(HTML('<script type="text/javascript" src="//rf.revolvermaps.com/0/0/3.js?i=5dfs4o8b9k7&amp;b=5&amp;s=0&amp;m=2&amp;cl=ffffff&amp;co=010020&amp;cd=aa0000&amp;v0=60&amp;v1=60&amp;r=1" async="async"></script>'), align = 'left'),
+    shinyjs::hidden(tags$p(HTML('<script type="text/javascript" src="//rf.revolvermaps.com/0/0/3.js?i=5dfs4o8b9k7&amp;b=5&amp;s=0&amp;m=2&amp;cl=ffffff&amp;co=010020&amp;cd=aa0000&amp;v0=60&amp;v1=60&amp;r=1" async="async"></script>'), align = 'left')),
     
-    hr(),
+    tags$hr(style="border-top: 2px solid #A9A9A9"),
     
     tags$p(HTML("<script type='text/javascript' id='clustrmaps' src='//cdn.clustrmaps.com/map_v2.js?cl=ffffff&w=251&t=tt&d=m1OK5wpD2xEM4YTLneQr-HXIvLS_D8Vs34uIkQuX-8w'></script>"), align = 'left')
     )
+  )
 )
 
 
@@ -391,7 +391,7 @@ tab_query <- div(id='query', fluidRow(
                          hr(),
                          
                          column(12,
-                                column(11,
+                                column(12,
                                        h5("Gene Expression in Different Sample Types", align = 'center'),
                                        #h6("(Wilcoxon rank-sum test, ***: P < 0.001; **: P < 0.01; *: P < 0.05; ns: P > 0.05)", align = 'center'),
                                        tags$hr(style="border-top: 1px dashed #A9A9A9"),
@@ -400,12 +400,26 @@ tab_query <- div(id='query', fluidRow(
                                        withSpinner(uiOutput('query_boxplot_ui'), type = 4, proxy.height=300)
                                        
                                 ),
-                                column(10)#,
-                                #column(2,
-                                       #downloadButton(outputId='query.box.summ.downbttn.csv', label = "CSV"),
-                                       #downloadButton(outputId='transcriptome.box.summ.downbttn.png', label = "PNG"),
-                                       #downloadButton(outputId='query.box.summ.downbttn.pdf', label = "PDF")
-                                #)
+                                
+                                column(1),
+                                column(11,
+                                       # downloadBttn(
+                                       #   outputId = "query.expression.downbttn.csv",
+                                       #   label = 'CSV',
+                                       #   style = "jelly",
+                                       #   color = "success", 
+                                       #   size = 'xs'
+                                       # ),
+                                       # downloadBttn(
+                                       #   outputId = "query.expression.downbttn.pdf",
+                                       #   label = 'PDF',
+                                       #   style = "jelly",
+                                       #   color = "success", 
+                                       #   size = 'xs'
+                                       # )
+                                       uiOutput("query_expression_downbttn_csv", inline = TRUE),
+                                       uiOutput("query_expression_downbttn_pdf", inline = TRUE)
+                                )
                                 
                          )
                 ),
@@ -421,7 +435,26 @@ tab_query <- div(id='query', fluidRow(
                                 column(11,
                                        #expr.dataset.id,
                                        withSpinner(plotOutput('survival_forest',width = 800, height = '100%'), type=4, proxy.height=300)
-                                       
+                                ),
+                                
+                                column(2),
+                                column(10,
+                                # downloadBttn(
+                                #   outputId = "query.survival.forest.downbttn.csv",
+                                #   label = 'CSV',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                #   ),
+                                # downloadBttn(
+                                #   outputId = "query.survival.forest.downbttn.pdf",
+                                #   label = 'PDF',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                #   )
+                                uiOutput("query_survival_forest_downbttn_csv", inline = TRUE),
+                                uiOutput("query_survival_forest_downbttn_pdf", inline = TRUE)
                                 )
                          ),
                          column(12,
@@ -432,18 +465,30 @@ tab_query <- div(id='query', fluidRow(
                                 column(1),
                                 column(11, 
                                        withSpinner(plotOutput('survival_km',height = '100%'), type=4, proxy.height=300) # width = 1100, height = 1360)
+                                ),
+                                
+                                column(2),
+                                column(10,
+                                       # downloadBttn(
+                                       #   outputId = "query.survival.km.downbttn.csv",
+                                       #   label = 'CSV',
+                                       #   style = "jelly",
+                                       #   color = "success", 
+                                       #   size = 'xs'
+                                       # ),
+                                       # downloadBttn(
+                                       #   outputId = "query.survival.km.downbttn.pdf",
+                                       #   label = 'PDF',
+                                       #   style = "jelly",
+                                       #   color = "success", 
+                                       #   size = 'xs'
+                                       # )
+                                       uiOutput("query_survival_km_downbttn_csv", inline = TRUE),
+                                       uiOutput("query_survival_km_downbttn_pdf", inline = TRUE)
                                 )
                                 
                          )
                          
-                         
-                         
-                         # column(10),
-                         # column(2,
-                         #        downloadButton(outputId='query.box.summ.downbttn.csv', label = "CSV"),
-                         #        #downloadButton(outputId='transcriptome.box.summ.downbttn.png', label = "PNG"),
-                         #        downloadButton(outputId='query.box.summ.downbttn.pdf', label = "PDF")
-                         # )
                 ),
                 
                 tabPanel(strong("Single-Cell RNAseq"), value = 'scRNAseq',
@@ -493,6 +538,48 @@ tab_query <- div(id='query', fluidRow(
                                 )
                          ),
                          
+                         column(1),
+                         column(5,
+                                # downloadBttn(
+                                #   outputId = "query.sc.tsne.downbttn.csv",
+                                #   label = 'CSV',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # ),
+                                # downloadBttn(
+                                #   outputId = "query.sc.tsne.downbttn.pdf",
+                                #   label = 'PDF',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # )
+                                
+                                uiOutput("query_sc_tsne_downbttn_csv", inline = TRUE),
+                                uiOutput("query_sc_tsne_downbttn_pdf", inline = TRUE)
+                         ),
+                         
+                         column(1),
+                         column(5,
+                                # downloadBttn(
+                                #   outputId = "query.sc.umap.downbttn.csv",
+                                #   label = 'CSV',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # ),
+                                # downloadBttn(
+                                #   outputId = "query.sc.umap.downbttn.pdf",
+                                #   label = 'PDF',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # )
+                                
+                                uiOutput("query_sc_umap_downbttn_csv", inline = TRUE),
+                                uiOutput("query_sc_umap_downbttn_pdf", inline = TRUE)
+                         ),
+                         
                          br(),
                          br(),
                          
@@ -508,6 +595,7 @@ tab_query <- div(id='query', fluidRow(
                                        #        #downloadButton(outputId='transcriptome.box.downbttn.png', label = "PNG"),
                                        #        downloadButton(outputId='transcriptome.box.downbttn.pdf', label = "PDF")
                                        # )
+                                       
                                        
                                 ),
                                 
@@ -527,6 +615,48 @@ tab_query <- div(id='query', fluidRow(
                                 
                          ),
                          
+                         column(1),
+                         column(5,
+                                # downloadBttn(
+                                #   outputId = "query.sc.tsne.expr.downbttn.csv",
+                                #   label = 'CSV',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # ),
+                                # downloadBttn(
+                                #   outputId = "query.sc.tsne.expr.downbttn.pdf",
+                                #   label = 'PDF',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # )
+                                
+                                uiOutput("query_sc_tsne_expr_downbttn_csv", inline = TRUE),
+                                uiOutput("query_sc_tsne_expr_downbttn_pdf", inline = TRUE)
+                              
+                         ),
+                         
+                         column(1),
+                         column(5,
+                                # downloadBttn(
+                                #   outputId = "query.sc.umap.expr.downbttn.csv",
+                                #   label = 'CSV',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # ),
+                                # downloadBttn(
+                                #   outputId = "query.sc.umap.expr.downbttn.pdf",
+                                #   label = 'PDF',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # )
+                                
+                                uiOutput("query_sc_umap_expr_downbttn_csv", inline = TRUE),
+                                uiOutput("query_sc_umap_expr_downbttn_pdf", inline = TRUE)
+                         ),
                          
                          column(12,
                                 br(),
@@ -541,10 +671,31 @@ tab_query <- div(id='query', fluidRow(
                                 # )
                                 
                          ),
+                         
+                         column(1),
+                         column(11,
+                                # downloadBttn(
+                                #   outputId = "query.sc.bubble.downbttn.csv",
+                                #   label = 'CSV',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # ),
+                                # downloadBttn(
+                                #   outputId = "query.sc.bubble.downbttn.pdf",
+                                #   label = 'PDF',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # )
+                                uiOutput("query_sc_bubble_downbttn_csv", inline = TRUE),
+                                uiOutput("query_sc_bubble_downbttn_pdf", inline = TRUE)
+                         ),
+                         
                          column(12,
                                 br(),
                                 tags$hr(style="border-top: 1px dashed #A9A9A9"),
-                                plotOutput('henry_sc_violin',width = 900, height = 350)#,
+                                plotOutput('henry_sc_violin',width = 900, height = 400)#,
                                 # br(),
                                 # column(7),
                                 # column(5,
@@ -553,7 +704,27 @@ tab_query <- div(id='query', fluidRow(
                                 #        downloadButton(outputId='transcriptome.box.downbttn.pdf', label = "PDF")
                                 # )
                                 
-                         )
+                         ),
+                         
+                         column(1),
+                         column(11,
+                                # downloadBttn(
+                                #   outputId = "query.sc.violin.downbttn.csv",
+                                #   label = 'CSV',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # ),
+                                # downloadBttn(
+                                #   outputId = "query.sc.violin.downbttn.pdf",
+                                #   label = 'PDF',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # ),
+                                uiOutput("query_sc_violin_downbttn_csv", inline = TRUE),
+                                uiOutput("query_sc_violin_downbttn_pdf", inline = TRUE)
+                         ),
                          
                          
                          
@@ -584,7 +755,7 @@ tab_signature <- fluidRow(
     width = 12,
     
     h5(strong("Gene Expression Signatures for Prostate Cancer Prognosis")),
-    tags$p("A comprehensive collection of 30 published gene expression-based prognostic signatures for prostate cancer is 
+    tags$p("An inclusive collection of 30 published gene expression-based prognostic signatures for prostate cancer is 
            included in PCaDB. The performances of the signatures have been investigated in the study [",
            a("Comprehensive evaluation of machine learning models and gene expression signatures for prostate cancer prognosis using large population cohorts", 
              href = "https://doi.org/10.1101/2021.07.02.450975",target='_blank'), "]. Comprehensive characterization of the signatures can be further performed in PCaDB.", 
@@ -653,6 +824,28 @@ tab_signature <- fluidRow(
                                 column(3)
                          ),
                          
+                         column(4),
+                         column(8,
+                                # downloadBttn(
+                                #   outputId = "signature.volcano.downbttn.csv",
+                                #   label = 'CSV',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # ),
+                                # downloadBttn(
+                                #   outputId = "signature.volcano.downbttn.pdf",
+                                #   label = 'PDF',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # )
+                                
+                                uiOutput("signature_volcano_downbttn_csv", inline = TRUE),
+                                uiOutput("signature_volcano_downbttn_pdf", inline = TRUE)
+                         ),
+                         
+                         
                          column(12,
                                 br(),
                                 tags$hr(style="border-top: 1px dashed #A9A9A9"),
@@ -697,6 +890,26 @@ tab_signature <- fluidRow(
                                 column(1)
                          ),
                          
+                         column(2),
+                         column(10,
+                                # downloadBttn(
+                                #   outputId = "signature.survival.forest.downbttn.csv",
+                                #   label = 'CSV',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # ),
+                                # downloadBttn(
+                                #   outputId = "signature.survival.forest.downbttn.pdf",
+                                #   label = 'PDF',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # )
+                                
+                                uiOutput("signature_survival_forest_downbttn_csv", inline = TRUE),
+                                uiOutput("signature_survival_forest_downbttn_pdf", inline = TRUE)
+                         ),
                          
                          
                          column(12,
@@ -747,6 +960,27 @@ tab_signature <- fluidRow(
                                 # )
                          ),
                          
+                         column(2),
+                         column(10,
+                                # downloadBttn(
+                                #   outputId = "signature.enrichment.barplot.downbttn.csv",
+                                #   label = 'CSV',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # ),
+                                # downloadBttn(
+                                #   outputId = "signature.enrichment.barplot.downbttn.pdf",
+                                #   label = 'PDF',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # )
+                                
+                                uiOutput("signature_enrichment_barplot_downbttn_csv", inline = TRUE),
+                                uiOutput("signature_enrichment_barplot_downbttn_pdf", inline = TRUE)
+                         ),
+                         
                          column(12,
                                 br(),
                                 tags$hr(style="border-top: 1px dashed #A9A9A9"),
@@ -761,7 +995,28 @@ tab_signature <- fluidRow(
                                 #        #downloadButton(outputId='enrich.bubble.downbttn.png', label = "PNG"),
                                 #        downloadButton(outputId='enrich.bubble.downbttn.pdf', label = "PDF")
                                 # )
-                         )
+                         ),
+                         
+                         column(2),
+                         column(10,
+                                # downloadBttn(
+                                #   outputId = "signature.enrichment.bubble.downbttn.csv",
+                                #   label = 'CSV',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # ),
+                                # downloadBttn(
+                                #   outputId = "signature.enrichment.bubble.downbttn.pdf",
+                                #   label = 'PDF',
+                                #   style = "jelly",
+                                #   color = "success", 
+                                #   size = 'xs'
+                                # )
+                                
+                                uiOutput("signature_enrichment_bubble_downbttn_csv", inline = TRUE),
+                                uiOutput("signature_enrichment_bubble_downbttn_pdf", inline = TRUE)
+                         ),
                          
                 ),
                 
@@ -1052,14 +1307,31 @@ tabPanel(strong("Differential Expression"), value='DEA',
                                         withSpinner(plotOutput('transcriptome_volcano_plot', height = 500), type = 4, proxy.height = 300)
                        )
                 )
-                
-                # column(7),
-                # column(5,
-                #        downloadButton(outputId='volcano.ccma.downbttn.csv', label = "CSV"),
-                #        #downloadButton(outputId='circ.expr.downbttn.png', label = "PNG"),
-                #        downloadButton(outputId='volcano.ccma.downbttn.pdf', label = "PDF")
-                # )
-         ),
+                ),
+         column(12, 
+                column(4),
+                column(8,
+                       conditionalPanel(condition = 'input.deg_submit',
+                       # downloadBttn(
+                       #   outputId = "transcriptome.volcano.downbttn.csv",
+                       #   label = 'CSV',
+                       #   style = "jelly",
+                       #   color = "success", 
+                       #   size = 'xs'
+                       # ),
+                       # downloadBttn(
+                       #   outputId = "transcriptome.volcano.downbttn.pdf",
+                       #   label = 'PDF',
+                       #   style = "jelly",
+                       #   color = "success", 
+                       #   size = 'xs'
+                       # )
+                       uiOutput("transcriptome_volcano_downbttn_csv", inline = TRUE),
+                       uiOutput("transcriptome_volcano_downbttn_pdf", inline = TRUE)
+                       
+                       )
+                )
+                ),
          
          
          column(12, 
@@ -1075,7 +1347,7 @@ tabPanel(strong("Differential Expression"), value='DEA',
 ),
 
 tabPanel(strong("Survival Analysis"), value='SurvivalAnalysis',
-         
+         conditionalPanel(condition = 'input.transcriptome_dataset_rows_selected <= 10',
          column(12,
                 br(),
                 hr(),
@@ -1090,6 +1362,7 @@ tabPanel(strong("Survival Analysis"), value='SurvivalAnalysis',
                 h6("(Low- and high-expression groups were separated by median values)", align = 'center'),
                 div(DT::dataTableOutput("table_km"),style = "font-size:90%")
          )#,
+         )
          
          # column(2),
          # 
@@ -1105,6 +1378,7 @@ tabPanel(strong("Survival Analysis"), value='SurvivalAnalysis',
 # ),
 
 tabPanel(strong("Prognostic Model"), value='PrognosticModel',
+         conditionalPanel(condition = 'input.transcriptome_dataset_rows_selected <= 10',
          br(),
          hr(),
          column(4,
@@ -1153,7 +1427,26 @@ tabPanel(strong("Prognostic Model"), value='PrognosticModel',
                        column(1),
                        column(11,
                               conditionalPanel(condition = 'input.surv_submit',
-                                               withSpinner(plotOutput('training_km_plot',width = 360, height = 360), type = 4, proxy.height = 300)
+                                               withSpinner(plotOutput('training_km_plot',width = 360, height = 360), type = 4, proxy.height = 300),
+                                               column(2),
+                                               column(10,
+                                                      # downloadBttn(
+                                                      #   outputId = "transcriptome.survival.km.downbttn.csv",
+                                                      #   label = 'CSV',
+                                                      #   style = "jelly",
+                                                      #   color = "success", 
+                                                      #   size = 'xs'
+                                                      # ),
+                                                      # downloadBttn(
+                                                      #   outputId = "transcriptome.survival.km.downbttn.pdf",
+                                                      #   label = 'PDF',
+                                                      #   style = "jelly",
+                                                      #   color = "success", 
+                                                      #   size = 'xs'
+                                                      # )
+                                                      uiOutput("transcriptome_survival_km_downbttn_csv", inline = TRUE),
+                                                      uiOutput("transcriptome_survival_km_downbttn_pdf", inline = TRUE)
+                                               )
                               )
                        )
                 )
@@ -1167,10 +1460,32 @@ tabPanel(strong("Prognostic Model"), value='PrognosticModel',
                 column(11, 
                        conditionalPanel(condition = 'input.surv_submit',
                                         h5('Kaplan Meier Survival Analysis in the Validation Datasets', align='center'),
-                                        withSpinner(plotOutput("validation.bcr.forest", width = 800, height = 600), type=4, proxy.height=300))
+                                        withSpinner(plotOutput("validation.bcr.forest", width = 800, height = 600), type=4, proxy.height=300),
+                                        column(1),
+                                        column(11,
+                                               # downloadBttn(
+                                               #   outputId = "transcriptome.survival.forest.downbttn.csv",
+                                               #   label = 'CSV',
+                                               #   style = "jelly",
+                                               #   color = "success", 
+                                               #   size = 'xs'
+                                               # ),
+                                               # downloadBttn(
+                                               #   outputId = "transcriptome.survival.forest.downbttn.pdf",
+                                               #   label = 'PDF',
+                                               #   style = "jelly",
+                                               #   color = "success", 
+                                               #   size = 'xs'
+                                               # )
+                                               uiOutput("transcriptome_survival_forest_downbttn_csv", inline = TRUE),
+                                               uiOutput("transcriptome_survival_forest_downbttn_pdf", inline = TRUE)
+                                        )
+                                        
+                                        )
                        
                 )
                 
+         )
          )
 )
 
@@ -1493,21 +1808,21 @@ tab_pipeline <- fluidRow(
     
     h5(strong('References'), align='left'),
     
-    tags$p("[1] Henry G.H., Malewska A., Joseph D.B., Malladi V.S., Lee J., Torrealba J., Mauck R.J., 
-           Gahan J.C., Raj G.V., Roehrborn C.G., Hon G.C., MacConmara M.P., Reese J.C., Hutchinson R.C., 
-           Vezina C.M. and Strand D.W. (2018). 
+    tags$p("[1] Henry, G.H., Malewska, A., Joseph, D.B., Malladi, V.S., Lee, J., Torrealba, J., Mauck, R.J., 
+           Gahan, J.C., Raj, G.V., Roehrborn, C.G., Hon, G.C., MacConmara, M.P., Reese, J.C., Hutchinson, R.C., 
+           Vezina, C.M. and Strand, D.W. (2018). 
            A Cellular Anatomy of the Normal Adult Human Prostate and Prostatic Urethra. Cell reports, 25(12), 3530-3542.",
            style = "font-size: 100%;"),
-    tags$p("[2] Li R. and Jia Z.(2021) 
+    tags$p("[2] Li, R., Zhu, J., Zhong, W.-D., and Jia, Z.(2021) 
            Comprehensive evaluation of machine learning models and gene expression signatures for 
            prostate cancer prognosis using large population cohorts. (2021). bioRxiv.",
            style = "font-size: 100%;"),
-    tags$p("[3] Li R., Wang S., Cui Y., Qu H., Chater J.M., Zhang L., Wei J., Wang M., 
-           Xu Y., Yu L., Lu J., Feng Y., Zhou R., Huang Y., Ma R., Zhu J., Zhong W. and Jia Z. (2020). 
+    tags$p("[3] Li, R., Wang, S., Cui, Y., Qu, H., Chater, J.M., Zhang, L., Wei, J., Wang, M., 
+           Xu, Y., Yu, L., Lu, J., Feng, Y., Zhou, R., Huang, Y., Ma, R., Zhu, J., Zhong, W.-D. and Jia, Z. (2020). 
            Extended application of genomic selection to screen multiomics data for prognostic 
            signatures of prostate cancer. Briefings in Bioinformatics, bbaa197.",
            style = "font-size: 100%;"),
-    tags$p("[4] Li, R., Qu, H., Wang, S., Wei, J., Zhang, L., Ma, R., Lu, J., Zhu, J., Zhong, W.D. and Jia, Z. (2018). 
+    tags$p("[4] Li, R., Qu, H., Wang, S., Wei, J., Zhang, L., Ma, R., Lu, J., Zhu, J., Zhong, W.-D. and Jia, Z. (2018). 
            GDCRNATools: an R/Bioconductor package for integrative analysis of lncRNA, miRNA and mRNA data in GDC. 
            Bioinformatics, 34(14), 2515-2517.",
            style = "font-size: 100%;"),
@@ -1731,17 +2046,19 @@ tab_tutorial <- fluidRow(
     width = 12,
 
     h4(strong('Query a gene of interest'), align='left'),
+    
+    h5(strong('1.1. Overview'), align='left'),
 
-    tags$p("Users can query a gene of interest by typing the Ensembl ID, 
+    tags$p("Users can query a gene of interest by", strong("typing"), "the Ensembl ID, 
            Entrez ID, or HGNC approved symbol and alias symbol in the 
-           'Search a gene' field and selecting the gene from the dropdown list. 
+           'Search a gene' field and", strong("selecting"), "the gene from the dropdown list. 
            The general information about the gene and some useful external 
            links to the databases such as ENSEMBL, HGNC, and NCBI for more 
            detailed description of the gene, Genotype-Tissue Expression (GTEx) 
            and Human Protein Atlas (HPA) for the gene expression pattern 
            in different human tissues, and Kyoto Encyclopedia of Genes and 
            Genomes (KEGG) for the pathways that the gene involves in are 
-           provided.",
+           provided (Figure 1-1).",
            style = "font-size: 110%;"),
     
     tags$p("A suite of advanced analyses and visualizations can be interactively 
@@ -1759,26 +2076,65 @@ tab_tutorial <- fluidRow(
     
     br(),
     
-    tags$img(src='img/tutorial_query_overview.png', width=800),
+    tags$img(src='img/tutorial_query_overview.png', width=900),
     
     br(),
-    h5(strong('Figure 1. Query a gene of interest'), align='center')#,
+    h5(strong('Figure 1-1. Query a gene of interest'), align='center'),
     
-    # br(),
-    # 
-    # tags$img(src='img/tutorial_query_gene_expression_boxplot.png', width=800),
-    # 
-    # br(),
-    # h5(strong('Figure 1-1. Gene expression in different sample types'), align='center'),
-    # 
-    # br(),
-    # 
-    # tags$img(src='img/tutorial_query_gene_expression_boxplot.png', width=800),
-    # 
-    # br(),
-    # h5(strong('Figure 1-1. Gene expression in different sample types'), align='center'),
-    # 
-    # br(),
+    br(),
+    
+    ###
+    h5(strong('1.2. Gene expression in different sample types'), align='left'),
+    tags$p("Users can select a dataset from the dropdown list and a boxplot 
+           will be generated to visualize the gene expression levels in 
+           different samples, such as primary tumor, tumor-adjacent normal, 
+           or metastatic tumor samples, depending on the availability of the 
+           data in the selected dataset (Figure 1-2)",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_query_expression.jpg', width=900),
+    br(),
+    h5(strong('Figure 1-2. Gene expression in different sample types'), align='center'),
+    br(),
+    
+    ###
+    h5(strong('1.3. Survival analysis of relapse-free survival (RFS)'), align='left'),
+    tags$p("Kaplan Meier (KM) survival analysis of RFS can be performed in the 
+           10 datasets with 1,754 primary tumor samples from PCa patients with 
+           the data of biochemical recurrence (BCR) status and follow up time 
+           after surgery.",
+           style = "font-size: 110%;"),
+    tags$p("A forest plot with the result from the survival analysis, including 
+           the numbers of samples, hazard ratios (HRs), 95% confidence intervals 
+           (CIs), and p values across all the datasets, will be generated. 
+           The KM survival curve for each dataset will also be plotted (Figure 1-3).",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_query_survival.jpg', width=900),
+    br(),
+    h5(strong('Figure 1-3. Forest plot and KM survival curves'), align='center'),
+    br(),
+    
+    ###
+    h5(strong('1.4. Gene expression analysis at the single-cell level'), align='left'),
+    tags$p("The expression pattern of the selected gene in different cell types 
+           from normal human prostate, including basal, luminal, 
+           neuroendocrine (NE), club, and hillock epithelia, endothelia, 
+           leukocyte, fibroblast, and smooth muscle, can be visualized using 
+           the uniform manifold approximation and projection (UMAP) plot 
+           and t-distributed stochastic neighbor embedding (t-SNE) plot, 
+           violin plot, and bubble plot with the average gene expression 
+           and percent of cells expressed for each cell type (Figure 1-4). The 
+           data used in this module was downloaded directly from 
+           GUDMAP (https://www.gudmap.org/chaise/record/#2/RNASeq:Study/RID=W-RAHW).",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_query_scRNAseq.jpg', width=900),
+    br(),
+    h5(strong('Figure 1-4. tSNE plot, UMAP plot, bubble plot, and violin plot 
+              to visualize the gene expression pattern at the single-cell level'), 
+       align='left'),
+    br()
     
     
     
@@ -1790,17 +2146,19 @@ tab_tutorial <- fluidRow(
     
     h4(strong('Prognostic signature evaluation'), align='left'),
     
+    h5(strong('2.1. Overview'), align='left'),
+    
     tags$p("A comprehensive evaluation of the prognostic performances 
            of 30 published signatures was performed in a previous study 
            and we included all those signatures in the PCaDB database, 
-           allowing a more detailed characterization of the signatures, 
-           including:",
+           allowing for a more detailed characterization of the signatures 
+           (Figure 2-1), including:",
            style = "font-size: 110%;"),
     
     tags$p("(1) List of signature genes",
            style = "font-size: 110%;"),
     
-    tags$p("(2) Differential expression of the signature genes",
+    tags$p("(2) Differential expression analysis of the signature genes",
            style = "font-size: 110%;"),
     
     tags$p("(3) KM Survival analysis of RFS for the signature genes",
@@ -1814,11 +2172,150 @@ tab_tutorial <- fluidRow(
     
     br(),
     
-    tags$img(src='img/tutorial_signature_overview.png', width=800),
+    tags$img(src='img/tutorial_signature_overview.png', width=900),
     
     br(),
-    h5(strong('Figure 2. Characterization of prognostic signatures'), align='center')#,
+    h5(strong('Figure 2-1. Overview of modules for prognostic signature evaluation'), 
+       align='center'),
+    br(),
     
+    ###
+    h5(strong('2.2. List of signature genes'), align='left'),
+    tags$p("The list of genes in a prognositc signature can be viewed by 
+           selecting the signature from the dropdown list. A comprehensive 
+           pipeline was created to convert the gene IDs/symbols reported in 
+           the orignial publication to the Ensembl IDs and HGNC gene symbols. 
+           We also did a manual inspection very carefully to double check the 
+           ambiguous signature genes.",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_signature_gene_list.jpg', width=900),
+    br(),
+    h5(strong('Figure 2-2. Th list of genes in the selected signature'), 
+       align='center'),
+    br(),
+    
+    ###
+    h5(strong('2.3. Differential expression analysis of the signature genes'), align='left'),
+    tags$p("The DE analysis of all signature genes between primary tumor and 
+           tumor-adjacent normal samples can be performed using the R package 
+           limma. A volcano plot will be generated to visualize these DE analysis result. 
+           Only differentially expressed genes (DEGs) in >= 3 signatures are 
+           labeled in the volcano plot. 
+           A data table will also be created to list the DEGs. The log2(fold change), 
+           BH-adjusted p value (FDR), the number of signatures, and the names of 
+           the signatures are reported in the table (Figure 2-3).",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_signature_differential_expression.jpg', width=900),
+    br(),
+    h5(strong('Figure 2-3. Differential expression analysis of the signature genes'), 
+       align='center'),
+    br(),
+    
+    ###
+    h5(strong('2.4. KM Survival analysis of RFS for the signature genes'), align='left'),
+    tags$p("The KM survival analysis of RFS for the signature genes can be 
+           performed in each of the 10 datasets with RFS information. 
+           A forest plot for the common genes in 3 or more signatures 
+           and a data table with the survival analysis result for 
+           all the signature genes are generated. In the data table, the 
+           hazard ratios (HRs), 95% confidence intervals (CIs), nominal p values, and 
+           BH-adjusted p values (FDRs), as well as the number of signatures and names of the 
+           signatures are reported (Figure 2-4).",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_signature_survival.jpg', width=900),
+    br(),
+    h5(strong('Figure 2-4. KM Survival analysis of RFS for the signature genes'), 
+       align='center'),
+    br(),
+    
+    ###
+    h5(strong('2.5. Pathway analysis of the signature genes'), align='left'),
+    tags$p("Functional enrichment analysis of the signature genes can be 
+           performed using clusterProfiler in PCaDB. Users can select a gene 
+           list from the dropdown list. A gene list could consist of genes in 
+           an individual signature, common genes in at least 2, 3, or 
+           4 signatures, and all the 1,042 signature genes.", 
+           style = "font-size: 110%;"),
+    
+    tags$p("PCaDB supports functional enrichment analysis with many 
+           pathway/ontology knowledgebases, including: ", 
+           style = "font-size: 110%;"),
+    
+    tags$p("(1) KEGG: Kyoto Encyclopedia of Genes and Genomes", style = "font-size: 110%;"),
+    tags$p("(2) REACTOME", style = "font-size: 110%;"),
+    tags$p("(3) DO: Disease Ontology", style = "font-size: 110%;"),
+    tags$p("(4) NCG: Network of Cancer Gene", style = "font-size: 110%;"),
+    tags$p("(5) DisGeNET", style = "font-size: 110%;"),
+    tags$p("(6) GO-BP: Gene Ontology (Biological Process)", style = "font-size: 110%;"),
+    tags$p("(7) GO-CC: Gene Ontology (Cellular Component)", style = "font-size: 110%;"),
+    tags$p("(8) GO-MF: Gene Ontology (Molecular Function)", style = "font-size: 110%;"),
+    tags$p("(9) MSigDB-H: Molecular Signatures Database (Hallmark)", style = "font-size: 110%;"),
+    tags$p("(10) MSigDB-C4: Molecular Signatures Database (CGN: Cancer Gene Neighborhoods)", style = "font-size: 110%;"),
+    tags$p("(11) MSigDB-C4: Molecular Signatures Database (CM: Cancer Modules)", style = "font-size: 110%;"),
+    tags$p("(12) MSigDB-C6: Molecular Signatures Database (C6: Oncogenic Signature Gene Sets)", style = "font-size: 110%;"),
+    #tags$p("(13) MSigDB-C7: Molecular Signatures Database (C7: Immunologic Signature Gene Sets)", style = "font-size: 110%;"),
+    
+    tags$p("A data table is produced to summarize the significantly enriched 
+    pathways/ontologies in descending order based on their significance 
+    levels, as well as the number and proportion of enriched genes and the 
+    gene symbols in each pathway/ontology term. The top enriched pathways/ontologies 
+           are visualized using both bar plot and bubble plot.", style = "font-size: 110%;"),
+    
+    br(),
+    tags$img(src='img/tutorial_signature_pathway.jpg', width=900),
+    br(),
+    h5(strong('Figure 2-5. Pathway analysis of the signature genes'), 
+       align='center'),
+    br(),
+    
+    
+    ###
+    h5(strong('2.6. Evaluation of the performances of the prognostic signatures'), align='left'),
+    tags$p("A comprehensive evaluation of the performances of the signatures 
+           can be performed in PCaDB using different survival analysis algorithms 
+           and different training and test datasets.",
+           style = "font-size: 110%;"),
+    tags$p("If a given signature is selected, a prognostic model can be developed 
+           using the expression data of the signature genes in the selected 
+           training dataset and the selected survival analysis method. 
+           The risk score of each patient in the test datasets will be 
+           computed based on the model.",
+           style = "font-size: 110%;"),
+    tags$p("For the intra-dataset comparison, 10-fold CV was used for model 
+           evaluation, whereas for the inter-dataset comparison, 
+           one dataset was treated as the training set and the other datasets 
+           were used as the test datasets at a time.",
+           style = "font-size: 110%;"),
+    tags$p("Three metrics including the concordance index (C-index), 
+           time-dependent receiver operating characteristics (ROC) curve, 
+           and hazard ratio (HR) estimated by the KM survival analysis are 
+           used to assess the prognostic power for the signature based on the 
+           independent test cohorts. 
+           Forest plots are used to visualize the results, while data tables 
+           with more detailed results are also provided.",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_signature_model_individual.jpg', width=900),
+    br(),
+    h5(strong('Figure 2-6. Evaluation of the prognostic performances of an individual signature'), 
+       align='center'),
+    br(),
+    
+    tags$p("Users can also select ‘All Signatures’ from the dropdown list to perform 
+           a comprehensive analysis to compare and rank the prognostic abiligies of 
+           all the signatures in each individual test set based on the three metrics.",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_signature_model_all.jpg', width=900),
+    br(),
+    h5(strong('Figure 2-7. Evaluation of the prognostic performances of all the signatures'), 
+       align='center'),
+    br()
+    
+
   ),
   
   box(
@@ -1826,6 +2323,7 @@ tab_tutorial <- fluidRow(
     width = 12,
     
     h4(strong('Transcriptomics data analysis'), align='left'),
+    h5(strong('3.1. Overview'), align='left'),
     
     tags$p("More advanced and comprehensive analyses can be performed 
            at the whole-transcriptome level in PCaDB, 
@@ -1833,7 +2331,7 @@ tab_tutorial <- fluidRow(
            tumor initiation and progression, identify biomarkers 
            associated with clinical outcomes (i.e., BCR), 
            as well as develop and validate gene expression-based 
-           signatures and models for PCa prognosis. 
+           signatures and models for PCa prognosis (Figure 3-1). 
            The whole-transcriptome level analysis includes: ",
            style = "font-size: 110%;"),
     
@@ -1846,18 +2344,105 @@ tab_tutorial <- fluidRow(
     tags$p("(3) Differential gene expression analysis",
            style = "font-size: 110%;"),
     
-    tags$p("(4) Kaplan Meier and CoxPH survival analysis of RFS",
+    tags$p("(4) KM and CoxPH survival analyses of RFS (only for the first 10 datasets with the information of time to BCR)",
            style = "font-size: 110%;"),
     
-    tags$p("(5) Development and validation of a new prognostic model",
+    tags$p("(5) Development and validation of a new prognostic model (only for the first 10 datasets with the information of time to BCR)",
            style = "font-size: 110%;"),
     
     br(),
     
-    tags$img(src='img/tutorial_transcriptome_overview.png', width=800),
+    tags$img(src='img/tutorial_transcriptome_overview.png', width=900),
     
     br(),
-    h5(strong('Figure 3. Whole-transcriptome data analysis'), align='center')#,
+    h5(strong('Figure 3-1. Overview of whole-transcriptome data analysis'), align='center'),
+    br(),
+    
+    ###
+    h5(strong('3.2. Summary of the dataset'), align='left'),
+    tags$p("When a transcriptomics dataset is selected, the summary of the dataset 
+           including platform, data processing pipeline, and the available metadata, 
+           such as sample type, preoperative PSA, Gleason score, 
+           BCR status, and time to BCR, will be displayed automatically (Figure 3-2).",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_transcriptome_summary.jpg', width=900),
+    br(),
+    h5(strong('Figure 3-2. Summary of the dataset'), 
+       align='center'),
+    br(),
+    
+    ###
+    h5(strong('3.3. Dimensionality reduction'), align='left'),
+    tags$p("Principal component analysis (PCA) can be performed using the 
+           highly expressed genes in the selected dataset, 
+           and a 2D or 3D interactive plot based on the first two 
+           or three principal components, respectively, 
+           will be generated for visualization (Figure 3-3).",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_transcriptome_pca.jpg', width=900),
+    br(),
+    h5(strong('Figure 3-3. Principal component analysis'), 
+       align='center'),
+    br(),
+    
+    ###
+    h5(strong('3.4. Differential gene expression analysis'), align='left'),
+    tags$p("The DE analysis using the whole-transcriptome data allows 
+           users to identify DEGs associated with tumor 
+           initiation or progression by comparing the case and 
+           control groups, i.e., primary tumor vs. tumor-adjacent normal, 
+           or metastatic tumor vs. primary tumor, etc. 
+           The R package limma is used to identify DEGs in PCaDB. 
+           A volcano plot is generated for visualization and a data table 
+           will also be created to list the DEGs (Figure 3-4).",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_transcriptome_differential_expression.jpg', width=900),
+    br(),
+    h5(strong('Figure 3-4. Identification of differentially expressed genes'), 
+       align='center'),
+    br(),
+    
+    ###
+    h5(strong('3.5. KM and CoxPH survival analyses of RFS'), align='left'),
+    tags$p("Both the univariate CoxPH and KM survival analyses of RFS can be 
+           performed at the whole-transcriptome level to 
+           identify biomarkers associated with clinical outcome of 
+           PCa in a selected dataset of interest (Figure 3-5). Note that the 
+           survival analysis can only be done in the first 10 datasets that 
+           have the BCR data.",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_transcriptome_survival.jpg', width=900),
+    br(),
+    h5(strong('Figure 3-5. Univariate CoxPH and KM survival analyses'), 
+       align='center'),
+    br(),
+    
+    ###
+    h5(strong('3.6. Development and validation of a new prognostic model'), align='left'),
+    tags$p("In PCaDB, users can provide a list of genes and select any survival 
+           analysis method, such as multivariate CoxPH, Cox model regularized 
+           with lasso penalty (Cox-Ridge), or ridge penalty (Cox-Lasso), to develop 
+           a prognostic model using the selected dataset as a training set. 
+           Risk scores for the patients in the training set are calculated 
+           and the median value is used as the threshold to dichotomize 
+           these patients into low- and high-risk groups. A KM survival curve 
+           is generated to show the prognostic performance of the signature 
+           in the training set. Similarly, risk scores are calculated for 
+           patients in each of the nine remaining datasets with RFS data, 
+           and a forest plot is generated to validate the prognostic 
+           model in independent cohorts (Figure 3-6).",
+           style = "font-size: 110%;"),
+    br(),
+    tags$img(src='img/tutorial_transcriptome_model.jpg', width=900),
+    br(),
+    h5(strong('Figure 3-6. Development and validation of the user-provided prognostic signature'), 
+       align='center'),
+    br(),
+    
     
     
   ),
@@ -1866,14 +2451,106 @@ tab_tutorial <- fluidRow(
     title = NULL, status = "info", solidHeader = TRUE, collapsible = FALSE,
     width = 12,
     
-    h4(strong('Data download'), align='left'),
+    h4(strong('Data Download'), align='left'),
     
-    tags$p("All the processed data deposited in PCaDB, including 
-           the ExpresionSet of a transcriptomics data in the .RDS format, 
+    #br(),
+    
+    h5(strong('4.1. Download processed data'), align='left'),
+    
+    tags$p("All the processed data deposited in PCaDB, including the ", 
+           style = "font-size: 110%;display:inline;"),
+    tags$i(strong("ExpresionSet"), style = "font-size: 110%;display:inline;"),
+    tags$p(" of a transcriptomics data in the .RDS format, 
            prognostic signatures in the .xlsx format, and 
            gene annotation in the .RDS format can be donwloaded directly 
-           by clicking the link to the data on the ", strong('Download'), ' page',
-           style = "font-size: 110%;")
+           by clicking the link to the data on the", strong("Download"), " page (Figure 4-1).", 
+           style = "font-size: 110%;display:inline;"),
+    
+    br(),
+    br(),
+    
+    tags$img(src='img/tutorial_download.jpg', width=900),
+    
+    h5(strong('Figure 4-1. Download processed gene expression data, sample metadata, and gene annotation data'), align='center'),
+    
+    br(),
+    
+    tags$p("For example, suppose the .RDS file for the TCGA-PRAD dataset has been downloaded, 
+           the gene expression data and sample metadata can be easily retrieved by running the 
+           following command in R (Figure 4-2).", 
+           style = "font-size: 110%;"),
+    
+    tags$img(src='img/tutorial_read_RDS.jpg', width=900),
+    
+    h5(strong('Figure 4-2. Retrieve gene expression data and sample metadata from the eSet object'), align='center'),
+    
+    br(),
+    
+    
+    h5(strong('4.2. Export data analysis & visualization results'), align='left'),
+    
+    tags$p("We provide two download buttons (",
+           style = "font-size: 110%;display:inline"),
+    tags$i(strong("PDF"), style = "font-size: 110%;display:inline"),
+    tags$p(" and ",
+           style = "font-size: 110%;display:inline"),
+    tags$i(strong("CSV"), style = "font-size: 110%;display:inline"),
+    
+    tags$p(") under each figure generated by PCaDB, allowing the users to 
+           download the high-resolution publication-quality vector image in PDF 
+           format and the data that is used to generate the figure in CSV format.", 
+           style = "font-size: 110%;display:inline;"),
+    
+    br(),
+    br(),
+    
+    tags$img(src='img/tutorial_download_pdf.jpg', width=900),
+    
+    h5(strong('Figure 4-3. Download the publication-quality vector image in PDF format'), align='center'),
+    
+    br(),
+    
+    tags$p("In this example, the expression data of the selected gene ", 
+           style = "font-size: 110%;display:inline"),
+    
+    tags$i(strong("KLK3"), style = "font-size: 110%;display:inline"),
+    
+    tags$p(" for the samples in the selected dataset GSE6919-GPL8300 will be saved to the 
+                                     CSV file ", 
+           style = "font-size: 110%;display:inline"),
+    
+    tags$i(strong("ENSG00000142515_KLK3_GSE6919-GPL8300_Expression.csv"), 
+           style = "font-size: 110%;display:inline"),
+    
+    tags$p(" by clicking the download button (Figure4-4).", style = "font-size: 110%;display:inline"),
+    
+    br(),
+    br(),
+    
+    tags$img(src='img/tutorial_download_csv.jpg', width=900),
+    
+    h5(strong('Figure 4-4. Download the data that is used to generate the figure to a CSV file'), align='center'),
+    
+    br(),
+    
+    tags$p("All the data tables generated for the data analysis outputs are also exportable in ", 
+           style = "font-size: 110%;display:inline"),
+    
+    tags$i(strong("CSV"), style = "font-size: 110%;display:inline"),
+    tags$p(" or ",
+           style = "font-size: 110%;display:inline"),
+    tags$i(strong("EXCEL"), style = "font-size: 110%;display:inline"),
+    
+    tags$p(" formats. The output can also be copied to the clipboard.",
+           style = "font-size: 110%;display:inline"),
+    
+    br(),
+    br(),
+    
+    tags$img(src='img/tutorial_download_table.jpg', width=900),
+    
+    h5(strong('Figure 4-5. Download the data table for the data analysis output'), align='center')
+    
   )
   
   
@@ -1921,23 +2598,23 @@ tab_contact <- fluidRow(
     
     column(12,
            h5(strong("Please feel free to contact us if you have any questions on the database or need any help to 
-                     curate transcriptomics datasets for prostate cancer."), align='left', style='color:black;'),
+                     curate data for cancer studies."), align='left', style='color:black;'),
            br(),
            
-           h5(strong("Ruidong Li, Ph.D. Research Data Scientist"), align='left', style='color:black'),
+           h5(strong("Ruidong Li, Ph.D., Research Bioinformatics Scientist"), align='left', style='color:black'),
            h5("Email: rli012@ucr.edu", align='left', style='color:black'),
            
-           webpage <- a('Webpage', href = 'https://rli012.github.io/', target="_blank", style = "font-size: 110%;"),
-           google.scholar <- a('Google Scholar', href = 'https://scholar.google.com/citations?user=dsoteJwAAAAJ&hl', target="_blank", style = "font-size: 110%;"),
+           #webpage <- a('Webpage', href = 'https://rli012.github.io/', target="_blank", style = "font-size: 110%;"),
            github <- a('Github', href = 'https://github.com/rli012', target="_blank", style = "font-size: 110%;"),
+           google.scholar <- a('Google Scholar', href = 'https://scholar.google.com/citations?hl=en&user=dsoteJwAAAAJ&view_op=list_works&sortby=pubdate', target="_blank", style = "font-size: 110%;"),
            #tagList(webpage, google.scholar, github),
            
            br(),
            br(),
-           h5(strong("Zhenyu Jia, Ph.D. Associate Professor and Geneticist"), align='left', style='color:black'),
+           h5(strong("Zhenyu Jia, Ph.D., Associate Professor and Geneticist"), align='left', style='color:black'),
            h5("Botany and Plant Sciences, University of California, Riverside", align='left', style='color:black'),
            h5("Email: arthur.jia@ucr.edu", align='left', style='color:black'),
-           tags$p(HTML("<a href='http://jialab.ucr.acsitefactory.com/' target='_blank'><h5>Jia Lab @ University of California, Riverside</h5></a>"))
+           tags$p(HTML("<a href='https://sites.google.com/ucr.edu/jia-lab-ucr/' target='_blank'><h5>Jia Lab @ University of California, Riverside</h5></a>"))
            )
   )
   
