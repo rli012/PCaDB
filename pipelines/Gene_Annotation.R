@@ -13,8 +13,8 @@ library(Vennerable)
 
 ################## Step 1: Data Collection ##################
 
-# GENCODE V32
-getGENCODEAnnotation <- function(species='human', release='32', type='gene', gtf.file=NULL) {
+# GENCODE V38
+getGENCODEAnnotation <- function(species='human', release='38', type='gene', gtf.file=NULL) {
   
   if (is.null(gtf.file)) {
     baseurl <- 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/'
@@ -36,17 +36,17 @@ getGENCODEAnnotation <- function(species='human', release='32', type='gene', gtf
 # The gene annotation in "pseudoautosomal regions" (PAR) of chromosome Y is identical between chromosomes X and Y
 # Gene names are usually HGNC or MGI-approved gene symbols mapped to the GENCODE genes by the Ensembl xref pipeline. 
 # Sometimes, when there is no official gene symbol, the Havana clone-based name is used.
-gencode <- getGENCODEAnnotation(species='human', release='32', type='gene')
+gencode <- getGENCODEAnnotation(species='human', release='38', type='gene')
 rownames(gencode) <- ifelse(duplicated(gencode$ensembl), gencode$gene_id, gencode$ensembl) # PAR_Y, or filter out
 gencode <- add_column(.data = gencode, .after = 'end', length=gencode$end-gencode$start+1)
-#saveRDS(gencode, file='data/Annotation/GENCODE_Annotation_Human_V32.RDS')
+#saveRDS(gencode, file='data/Annotation/GENCODE_Annotation_Human_V38.RDS')
 
 idx <- which(duplicated(gencode$gene_name))
 View(gencode[idx,])
 sort(unique(gencode[idx,]$gene_name)) # 113 genes
 
 
-# ENSEMBL V98
+# ENSEMBL V105
 getENSEMBLAnnotation <- function(attributes=NULL) {
   
   if (is.null(attributes)) {
@@ -73,7 +73,7 @@ getENSEMBLAnnotation <- function(attributes=NULL) {
 }
 
 ensembl <- getENSEMBLAnnotation()
-#saveRDS(ensembl, file='data/Annotation/ENSEMBL_Annotation_Human_V98.RDS')
+#saveRDS(ensembl, file='data/Annotation/ENSEMBL_Annotation_Human_V105.RDS')
 
 ensembl[ensembl==''] <- NA
 
