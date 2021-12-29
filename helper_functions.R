@@ -351,13 +351,14 @@ histogramFun <- function(dataForHistogram) {
 }
 
 
-ExprBoxPlotFun <- function(dataForBoxPlot, colors) {
+ExprBoxPlotFun <- function(dataForBoxPlot, colors, y.lab) {
+  
   p <- ggplot(dataForBoxPlot, aes(x=group, y=expr)) + 
     scale_fill_manual(values=colors) +
     #scale_fill_manual(values=c("#E69F00", "#56B4E9")) +
     geom_boxplot(aes(fill=group), width=0.8,
-                outlier.shape = NA, outlier.size = NA,#outlier.colour = 'black',
-                outlier.fill = NA) +
+                 outlier.shape = NA, outlier.size = NA,#outlier.colour = 'black',
+                 outlier.fill = NA) +
     #geom_boxplot(fill='white', width=0.2,
     #             outlier.shape = NA, outlier.size = NA,#outlier.colour = 'black',
     #             outlier.fill = NA) +
@@ -365,7 +366,7 @@ ExprBoxPlotFun <- function(dataForBoxPlot, colors) {
     #facet_wrap(~dataset, nrow=1, scales = 'free') +
     #geom_jitter(size=0.1, width=0.2) +
     #ylim(-0.1,3)+
-    xlab('') + ylab(expression(bold('Log'["2"]*'(Expression Level)'))) + 
+    #xlab('') + ylab(expression(bold('Log'["2"]*'(Expression Level)'))) + 
     #ggtitle(paste0('Expression of ', gene.symbol)) +
     #guides(fill = guide_legend(nrow=1)) +
     theme_bw() +
@@ -383,6 +384,22 @@ ExprBoxPlotFun <- function(dataForBoxPlot, colors) {
     theme(plot.margin =  margin(t = 0.25, r = 0.25, b = 0.25, l = 1, unit = "cm"))
   
   #p <- p + geom_jitter(size=0.1, width=0.2)
+  
+  
+  if (y.lab=='CPM') {
+    p <- p + xlab('') + ylab(expression(bold('Log'["2"]*'(CPM)')))
+  } else if (y.lab=='Intensities') {
+    p <- p + xlab('') + ylab(expression(bold('Log'["2"]*'(Intensities)')))
+  } else if (y.lab=='RPKM') {
+    p <- p + xlab('') + ylab(expression(bold('Log'["2"]*'(RPKM)')))
+  } else if (y.lab=='FPKM') {
+    p <- p + xlab('') + ylab(expression(bold('Log'["2"]*'(FPKM)')))
+  } else {
+    p <- p + xlab('') + ylab(expression(bold('Log'["2"]*'(Expression)')))
+  }
+  
+  
+  
   
   return(p)
   
@@ -1035,7 +1052,7 @@ volcanoPlotFun <- function(dataForVolcanoPlot, logFcThreshold, adjPvalThreshold)
     #scale_x_continuous(breaks=c(-4,-2,0,2,4,6,8,10)) +
     #scale_y_continuous(expand = c(0.3, 0)) +
     #scale_color_manual(values = c('#4285F4',"gray", '#FBBC05')) +
-    scale_color_manual(values = c(google.green,"gray", google.red)) +
+    scale_color_manual(values = c('DOWN'=google.green,'NS'="gray", 'UP'=google.red)) +
     #facet_wrap(~Comparison, ncol = 2) +
     #geom_text_repel(data = subset(dataForVolcanoPlot, 
     #                              adj.P.Val < adjPvalThreshold & logFC > logFcThreshold), 

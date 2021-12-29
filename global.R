@@ -34,9 +34,8 @@ gene.annotation <- gene.annotation[c(idx1,idx2),]
 
 gene.default <- 'ENSG00000142515' # KLK3
 
-datasets <- readRDS('data/PCaDB_Datasets.RDS')
-#pcadb.dataset <- datasets[,c(2,1,4,5,7,8,11,12,13)]
-pcadb.dataset <- datasets[,c(2,1,8,12,13)]
+datasets <- readRDS('data/PCaDB_Datasets.RDS') #
+pcadb.dataset <- datasets[,c(1,2,3,5,6,8)] # only show in the table
 
 # meta.data <- readRDS('data/PCaDB_Metadata.RDS')
 # expr.data <- readRDS('data/PCaDB_Expression.RDS')
@@ -83,7 +82,9 @@ bcr.dataset <- pcadb.dataset$Dataset[1:10]
 expr.dataset <- c('TCGA-PRAD','Taylor','Cambridge','CancerMap','CIT','GSE59745','GSE79021',
   'GSE35988-GPL6480','GSE35988-GPL6848','GSE59745','SU2C-PCF-2019-Capture','SU2C-PCF-2019-PolyA',
   'GSE3325','GSE32269','GSE6919-GPL8300','GSE6919-GPL92','GSE6919-GPL93','GSE6752','GSE8218',
-  'E-TABM-26-U133A','E-TABM-26-U133B','GSE29079','GSE97284','GSE62872','GSE77930','Neuroendocrine')
+  'E-TABM-26-U133A','E-TABM-26-U133B','GSE29079','GSE97284','GSE62872','GSE77930','Neuroendocrine',
+  datasets$Dataset[51:77][-c(9,15)]
+  )
 
 
 ## Taylor: some cell lines
@@ -225,12 +226,12 @@ pcadb.pca <- readRDS(file='data/PCaDB_PCA_Analysis.RDS')
 ###
 pcadb.coxph <- readRDS(file='data/PCaDB_Survival_CoxPH_P0.05.RDS')
 pcadb.km <- readRDS(file='data/PCaDB_Survival_KM_P0.05.RDS')
-
+pcadb.coxph.multi <- readRDS(file='data/PCaDB_Survival_Multivariate_CoxPH_P0.05.RDS')
 
 ###
 meta.data <- readRDS('data/PCaDB_Metadata.RDS')
 expr.data <- readRDS('data/PCaDB_Expression.UnCompressed.RDS')
-
+#expr.data <- readRDS('data/PCaDB_Expression.RDS')
 ##
 scDataHenry <<- readRDS('data/PCaDB_scDataHenry.UnCompressed.RDS')
 

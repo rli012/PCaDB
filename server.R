@@ -189,14 +189,33 @@ server <- function(input, output, session) {
                                  expr=expr.data[[expr.dataset.id]][gene.id,],
                                  stringsAsFactors = F)
     
+    filter <- which(is.na(dataForBoxPlot$group))
+    if (length(filter)>0) {
+      dataForBoxPlot <- dataForBoxPlot[-filter,]
+    }
+    
     # if (expr.dataset.id=='Taylor') {
     #   filter <- grep('Cell Line', dataForBoxPlot$group)
     #   dataForBoxPlot <- dataForBoxPlot[-filter,]
     # }
     
+    if (expr.dataset.id %in% datasets$Dataset[which(datasets$Technology=='Microarray')]) {
+      y.lab <- 'Intensities'
+    } else if (expr.dataset.id %in% c('DFKZ')) {
+      y.lab <- 'RPKM'
+    } else if (expr.dataset.id %in% c('SU2C-PCF-2019-Capture','SU2C-PCF-2019-PolyA',
+                                      'SMMU')) {
+      y.lab <- 'FPKM'
+    } else if (expr.dataset.id %in% c('Neuroendocrine','Broad-Cornell')) {
+      y.lab <- 'Expression'
+    } else {
+      y.lab <- 'CPM'
+    }
+    
+    
     queryexpression$data <- dataForBoxPlot
     
-    p <- ExprBoxPlotFun(dataForBoxPlot, colors)
+    p <- ExprBoxPlotFun(dataForBoxPlot, colors, y.lab)
     
     queryexpression$plot <- p
     
@@ -234,12 +253,18 @@ server <- function(input, output, session) {
     
     if (expr.dataset.id %in% c('Taylor','GSE32269','SU2C-PCF-2019-PolyA','SU2C-PCF-2019-Capture',
                                'GSE6752','GSE77930','Neuroendocrine',
-                               'GSE6919-GPL8300','GSE6919-GPL92','GSE6919-GPL93')) {
+                               'GSE6919-GPL8300','GSE6919-GPL92','GSE6919-GPL93',
+                               'GSE2443','GSE126078',
+                               'E-MTAB-5021','GSE104131')) {
       plotHeight <- 500
     } else if (expr.dataset.id %in% c('GSE59745', 'GSE97284','GSE3325',
-                                      'GSE35988-GPL6480','GSE35988-GPL6848'))
+                                      'GSE35988-GPL6480','GSE35988-GPL6848',
+                                      'GSE6956','GSE32448','GSE48403','GSE95369',
+                                      'GSE118435','GSE120741'))
     {
       plotHeight <- 450
+    } else if (expr.dataset.id %in% c('GSE111177')) {
+      plotHeight <- 400
     } else {
       plotHeight <- 350
     }
@@ -1976,9 +2001,20 @@ server <- function(input, output, session) {
                                                       selection = list(mode='single', selected=1)
   )
   
-  observe({
+  seed <- reactiveVal()
+  selGroups <- reactiveValues(comparisons=NULL)
+  groupNames <- reactiveValues()
+  
+  #trdt <- reactiveValues()
+  
+  transcriptomedge <- reactiveValues()
+  
+  #observe({
+  observeEvent(input$transcriptome_dataset_rows_selected, {
     
     req(input$transcriptome_dataset_rows_selected)
+    
+    selGroups$comparisons <- list()
     
     # ###
     # readRDSAs('data/PCaDB_Signature_Model_Comparison.RDS', 'model.comparison')
@@ -1990,9 +2026,12 @@ server <- function(input, output, session) {
     
     transcriptome_dataset_idx <- input$transcriptome_dataset_rows_selected
     project <- as.character(datasets[transcriptome_dataset_idx,'Dataset'])
-    
     meta <- meta.data[[project]]
     expr <- expr.data[[project]]
+    #trdt$project <- as.character(datasets[transcriptome_dataset_idx,'Dataset'])
+    #trdt$meta <- meta.data[[project]]
+    #trdt$expr <- expr.data[[project]]
+    #meta <- trdt$meta
     
     output$transcriptome_text_summary_platform <- renderText({
       
@@ -2002,7 +2041,13 @@ server <- function(input, output, session) {
     
     output$transcriptome_text_summary_accession <- renderText({
       
-      datasets[transcriptome_dataset_idx,'GEO/ArrayExpress/EGA']
+      datasets[transcriptome_dataset_idx,'GEO/ArrayExpress']
+      
+    })
+    
+    output$transcriptome_text_summary_sra <- renderText({
+      
+      datasets[transcriptome_dataset_idx,'SRA']
       
     })
     
@@ -2033,7 +2078,8 @@ server <- function(input, output, session) {
     })
     
     output$transcriptome_histogram_psa <- renderPlotly({
-      keep <- which(meta$sample_type=='Tumor' | meta$sample_type=='Primary')
+      keep <- which(meta$sample_type %in% c('Tumor','Primary',
+                                            'Locally-advanced or Metastatic'))
       dataForHistogram <- meta[keep,]
       dataForHistogram$x <- as.integer(dataForHistogram$preop_psa)
       
@@ -2152,14 +2198,20 @@ server <- function(input, output, session) {
       #   link <- paste0('https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=', accession)
       # }
       
-      accession <- as.character(datasets[transcriptome_dataset_idx,'GEO/ArrayExpress/EGA'])
+      accession <- as.character(datasets[transcriptome_dataset_idx,'GEO/ArrayExpress'])
+      
+      if (transcriptome_dataset_idx %in% c(53,54,59)) {
+        accession <- as.character(datasets[transcriptome_dataset_idx,'SRA'])
+      }
       
       if (grepl('E-MTAB', accession)) {
-        link <- paste0('https://www.ebi.ac.uk/arrayexpress/experiments/',
-                       datasets[transcriptome_dataset_idx,'GEO/ArrayExpress/EGA'])
+        link <- paste0('https://www.ebi.ac.uk/arrayexpress/experiments/', accession)
         tags$iframe(src=link, seamless="seamless", width='100%', height='600')
       } else if (grepl('GSE', accession)) {
         link <- paste0('https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=', accession)
+        tags$iframe(src=link, seamless="seamless", width='100%', height='600')
+      } else if (grepl('SRP|ERP', accession)) {
+        link <- paste0('https://trace.ncbi.nlm.nih.gov/Traces/sra/?study=', accession)
         tags$iframe(src=link, seamless="seamless", width='100%', height='600')
       }
       
@@ -2229,6 +2281,7 @@ server <- function(input, output, session) {
     }) # }, height = 700, width = 700)
     
     
+    seed(sample(1e9,1))
     groups <- meta$pcadb_group
     
     # group.levels <- as.character(unlist(sapply(ccma.datasets[idx,'Group'], 
@@ -2240,6 +2293,8 @@ server <- function(input, output, session) {
     
     ### deg
     deg.group.names <- sapply(groups[,1], function(x) digest(x,algo='murmur32',seed=sample(1e9,1)))
+    groupNames$deg.group.names <- deg.group.names
+    
     deg.groups <- cbind(rep(NA, nrow(groups)), rep(NA, nrow(groups)), groups)
     
     deg.groups[,1] <- sprintf(
@@ -2286,21 +2341,78 @@ server <- function(input, output, session) {
         
                       )
     
-    
     shinyjs::hide('transcriptome_deg_table')
     shinyjs::hide('transcriptome_volcano_plot')
     
     shinyjs::hide('transcriptome_volcano_downbttn_csv')
     shinyjs::hide('transcriptome_volcano_downbttn_pdf')
     
-    transcriptomedge <- reactiveValues()
+  })
+    
+    observeEvent(input$selGroup, {
+      if(input$selGroup$checked) {
+        selGroups$comparisons[[input$selGroup$name]] <- input$selGroup$value
+      } else {
+        selGroups$comparisons[[input$selGroup$name]] <- NULL
+      }
+    })
+    
+    #observeEvent(input$transcriptome_dataset_rows_selected, {
+    #  req(input$transcriptome_dataset_rows_selected)
+      
+      # ###
+      # readRDSAs('data/PCaDB_Signature_Model_Comparison.RDS', 'model.comparison')
+      # ###
+      # readRDSAs(file='data/PCaDB_PCA_Analysis.RDS', 'pcadb.pca')
+      # ###
+      # readRDSAs(file='data/PCaDB_Survival_CoxPH_P0.05.RDS', 'pcadb.coxph')
+      # readRDSAs(file='data/PCaDB_Survival_KM_P0.05.RDS', 'pcadb.km')
+      
+      
     
     observeEvent(input$deg_submit, {
       
-      idx <- unlist(sapply(deg.group.names, function(i) input[[i]]))
+      req(input$transcriptome_dataset_rows_selected)
       
+      shinyjs::hide('volcano_spinner')
+      shinyjs::hide('transcriptome_deg_table')
+      shinyjs::hide('transcriptome_volcano_plot')
+
+      shinyjs::hide('transcriptome_volcano_downbttn_csv')
+      shinyjs::hide('transcriptome_volcano_downbttn_pdf')
+      
+      # project <- trdt$project
+      # meta <- trdt$meta
+      # expr <- trdt$expr
+      
+      transcriptome_dataset_idx <- input$transcriptome_dataset_rows_selected
+      project <- as.character(datasets[transcriptome_dataset_idx,'Dataset'])
+      meta <- meta.data[[project]]
+      expr <- expr.data[[project]]
+      
+      
+      #idx <- unlist(sapply(deg.group.names, function(i) input[[i]]))
+      #idx <- unlist(reactiveValuesToList(selGroups))
+      idx <- unlist(selGroups$comparisons)
+      
+      if (length(unique(idx))==0) {
+        shinyalert(text=paste0('No group has been selected'));
+      } else if (length(unique(idx))==1) {
+        shinyalert(text=paste0('Only one group has been selected'));
+      }
+
       req(length(unique(idx))==2)
       
+      shinyjs::show('volcano_spinner')
+      
+      deg.group.names <- groupNames$deg.group.names
+      names(idx) <- names(deg.group.names)[match(names(idx), deg.group.names)]
+      
+      keep <- which(!is.na(names(idx)))
+      idx <- idx[keep]
+      
+      #print (idx) #**************************************
+
       groups <- names(idx)
       
       idx1 <- which(idx=='1')
@@ -2311,13 +2423,11 @@ server <- function(input, output, session) {
       
       deg.group <- meta$pcadb_group
       
-      idx <- which(deg.group %in% groups)
-      deg.group <- deg.group[idx]
-      
+      idx.samples <- which(deg.group %in% groups)
+      deg.group <- deg.group[idx.samples]
       
       deg.group.pcadb <- ifelse(deg.group %in% control.groups, 'Control', 'Case')
       deg.group.pcadb <- factor(deg.group.pcadb)
-      
       
       ###
       #req(length(levels(deg.group.ccma)==2))
@@ -2341,7 +2451,7 @@ server <- function(input, output, session) {
       
       genes <- rownames(expr)[keep]
       
-      fit <- lmFit(expr[genes,idx], design)
+      fit <- lmFit(expr[genes,idx.samples], design)
       fit2 <- contrasts.fit(fit, contrast.matrix)
       fit2 <- eBayes(fit2)
       
@@ -2443,33 +2553,22 @@ server <- function(input, output, session) {
     
     
     ### Survival Analysis
-    
+    observe({
+      
+      req(input$transcriptome_dataset_rows_selected)
+      
+      # project <- trdt$project
+      # meta <- trdt$meta
+      # expr <- trdt$expr
+      
+      transcriptome_dataset_idx <- input$transcriptome_dataset_rows_selected
+      project <- as.character(datasets[transcriptome_dataset_idx,'Dataset'])
+      meta <- meta.data[[project]]
+      expr <- expr.data[[project]]
+      
     if(input$transcriptome=='SurvivalAnalysis' & ! project %in% bcr.dataset) {
       shinyalert(text=paste0('Relapse-free survival (RFS) data is not available for the selected dataset: ', project));
     }
-    
-    output$table_coxph <- DT::renderDataTable({
-      
-      if(! project %in% bcr.dataset) {
-        return()
-      }
-      
-      dt <- pcadb.coxph[[project]]#[1:500,]
-      
-      dt[,3:6] <- apply(dt[,3:6], 2, 
-                        function(v) ifelse(v>=0.01, format(round(v,3), nsmall = 3),
-                                           format(v, scientific=T, digits = 3)))
-      
-      dt
-      
-    },
-    callback=table.download.button,
-    options = list(pageLength = 10, dom = 'lfrtBp', buttons = c('copy', 'csv', 'excel')), #i
-    extensions = "Buttons",
-    selection = list(mode='none', selected=1), ### === not selectable
-    rownames = FALSE,
-    server = FALSE
-    )
     
     output$table_km <- DT::renderDataTable({
       
@@ -2502,6 +2601,55 @@ server <- function(input, output, session) {
     #   })
     #   
     # })
+    
+    
+    output$table_coxph <- DT::renderDataTable({
+      
+      if(! project %in% bcr.dataset) {
+        return()
+      }
+      
+      dt <- pcadb.coxph[[project]]#[1:500,]
+      
+      dt[,3:6] <- apply(dt[,3:6], 2, 
+                        function(v) ifelse(v>=0.01, format(round(v,3), nsmall = 3),
+                                           format(v, scientific=T, digits = 3)))
+      
+      dt
+      
+    },
+    callback=table.download.button,
+    options = list(pageLength = 10, dom = 'lfrtBp', buttons = c('copy', 'csv', 'excel')), #i
+    extensions = "Buttons",
+    selection = list(mode='none', selected=1), ### === not selectable
+    rownames = FALSE,
+    server = FALSE
+    )
+    
+    
+    output$table_coxph_multi <- DT::renderDataTable({
+      
+      if(! project %in% bcr.dataset) {
+        return()
+      }
+      
+      dt <- pcadb.coxph.multi[[project]]#[1:500,]
+      
+      dt[,3:6] <- apply(dt[,3:6], 2, 
+                        function(v) ifelse(v>=0.01, format(round(v,3), nsmall = 3),
+                                           format(v, scientific=T, digits = 3)))
+      
+      dt
+      
+    },
+    callback=table.download.button,
+    options = list(pageLength = 10, dom = 'lfrtBp', buttons = c('copy', 'csv', 'excel')), #i
+    extensions = "Buttons",
+    selection = list(mode='none', selected=1), ### === not selectable
+    rownames = FALSE,
+    server = FALSE
+    )
+    
     
     ### Model
     
