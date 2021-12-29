@@ -10,6 +10,6 @@ Please cite: [Li, R., Zhu, J., Zhong, W., Jia, Z. (2021). PCaDB - a comprehensiv
 
 ![](https://github.com/rli012/PCaTranscriptome/blob/master/www/img/home.png)
 
-![](https://github.com/rli012/PCaTranscriptome/blob/master/www/img/pipeline.png)
+![](https://github.com/rli012/PCaTranscriptome/blob/master/www/img/pipeline.jpg)
 
 ![](https://github.com/rli012/PCaTranscriptome/blob/master/www/img/analysis.png)
