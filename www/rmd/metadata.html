@@ -280,6 +280,8 @@ phenoData$time_to_death &lt;- ifelse(!is.na(pheno2$days_to_death),
 phenoData$os_status &lt;- ifelse(!is.na(pheno2$days_to_death), 1, 0)
 
 phenoData$time_to_bcr &lt;- ifelse(!is.na(pheno2$days_to_first_biochemical_recurrence),
+                                round(as.numeric(pheno2$days_to_first_biochemical_recurrence/365*12),2), 
+                                round(as.numeric(pheno2$days_to_last_followup/365*12),2))
 phenoData$bcr_status &lt;- ifelse(!is.na(pheno2$days_to_first_biochemical_recurrence), 1, 0)
 
 phenoData$pcadb_group &lt;- phenoData$sample_type
@@ -352,9 +354,11 @@ saveRDS(phenoData, file=paste0(&#39;data/rData/&#39;, sra, &#39;_Metadata.RDS&#3
 #********************************************#
 
 # DFKZ (https://www.cbioportal.org/study/clinicalData?id=prostate_dkfz_2018)
+# wget https://cbioportal-datahub.s3.amazonaws.com/prostate_dkfz_2018.tar.gz -P data/cBioPortal/
+# tar -xvzf prostate_dkfz_2018.tar.gz
 
 dt &lt;- &#39;DFKZ&#39;
-pheno &lt;- read.table(&#39;data/cBioPortal/prostate_dkfz_2018_clinical_data.tsv&#39;, 
+pheno &lt;- read.table(&#39;data/cBioPortal/prostate_dkfz_2018/prostate_dkfz_2018_clinical_data.tsv&#39;, 
                     sep=&#39;\t&#39;, header=T, stringsAsFactors = F)
 
 rownames(pheno) &lt;- pheno$Sample.ID

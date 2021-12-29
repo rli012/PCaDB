@@ -130,6 +130,8 @@ phenoData$time_to_death <- ifelse(!is.na(pheno2$days_to_death),
 phenoData$os_status <- ifelse(!is.na(pheno2$days_to_death), 1, 0)
 
 phenoData$time_to_bcr <- ifelse(!is.na(pheno2$days_to_first_biochemical_recurrence),
+                                round(as.numeric(pheno2$days_to_first_biochemical_recurrence/365*12),2), 
+                                round(as.numeric(pheno2$days_to_last_followup/365*12),2))
 phenoData$bcr_status <- ifelse(!is.na(pheno2$days_to_first_biochemical_recurrence), 1, 0)
 
 phenoData$pcadb_group <- phenoData$sample_type
