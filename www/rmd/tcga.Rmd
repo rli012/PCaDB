@@ -1,0 +1,80 @@
+---
+#title: TCGA Data Collection
+output: html_document
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 1800px;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+h1.title {
+  font-size: 14px;
+  color: DarkRed;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo=TRUE, message=FALSE, eval=FALSE}
+
+####################################################################
+#######                TCGA-PRAD Data Collection             #######
+####################################################################
+
+library(GDCRNATools)
+library(edgeR)
+library(limma)
+
+project <- 'TCGA-PRAD'
+rnadir <- paste('data', project, 'RNAseq', sep='/')
+
+### Download RNAseq data
+gdcRNADownload(project.id     = project, 
+               data.type      = 'RNAseq', 
+               write.manifest = FALSE,
+               method         = 'gdc-client',
+               directory      = rnadir)
+
+### Parse RNAseq metadata
+meta.rna <- gdcParseMetadata(project.id = project,
+                                   data.type  = 'RNAseq', 
+                                   write.meta = FALSE)
+
+### Filter duplicated samples
+meta.rna <- gdcFilterDuplicate(meta.rna)
+
+### Filter non-Primary Tumor and non-Solid Tissue Normal samples
+meta.rna <- gdcFilterSampleType(meta.rna)
+
+
+### Merge RNAseq data
+rnaCounts <- gdcRNAMerge(metadata  = meta.rna, 
+                         path      = rnadir, # the folder in which the data stored
+                         organized = FALSE, # if the data are in separate folders
+                         data.type = 'RNAseq')
+
+### TMM normalization
+dge <-  DGEList(counts = rnaCounts)
+dge = calcNormFactors(dge, method = 'TMM')
+
+exprData <- edgeR::cpm(dge,log = TRUE)
+
+saveRDS(exprData, file=paste0('data/rData/', project, '_Expression.RDS'))
+
+##### For downstream analysis
+### Filter out low-expression genes (logCPM < 1 in more than 50% of the samples)
+# keep <- rowSums(edgeR::cpm(dge) > 1) >= 0.5*ncol(rnaCounts)
+# sum(keep)
+# dge <- dge[keep,,keep.lib.sizes = TRUE]
+
+### Voom normalization
+#v <- voom(dge, design=NULL, plot = FALSE)
+
+```

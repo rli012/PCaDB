@@ -1,0 +1,90 @@
+---
+#title: GEO Data Collection
+output: html_document
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 1800px;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+h1.title {
+  font-size: 14px;
+  color: DarkRed;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo=TRUE, message=FALSE, eval=FALSE}
+#################################################################################
+#######            GEO/ArrayExpress Data Collection (Affymetrix)          #######
+#################################################################################
+
+library(GEOquery)
+library(oligo)
+
+### Annotation package
+
+# http://brainarray.mbni.med.umich.edu/Brainarray/Database/CustomCDF/CDF_download.asp
+# Version 24
+# R Source Package: O
+
+# Affymetrix Human Exon 1.0 ST Array: pd.huex10st.hs.gencodeg
+# Affymetrix Human Gene 2.0 ST Array: pd.huex20st.hs.gencodeg
+# Affymetrix Human Transcriptome Array 2.0: pd.hta20.hs.gencodeg
+# Affymetrix Human Genome U133A Array: pd.hgu133a.hs.gencodeg
+# Affymetrix Human Genome U133 Plus 2.0 Array: pd.hgu133plus2.hs.gencodeg
+# Affymetrix Human Genome U133A 2.0 Array: pd.hgu133a2.hs.gencodeg
+
+# library(pd.hg.u133.plus.2) # from Bioconductor (NOT IN USE)
+
+#install.packages("http://mbni.org/customcdf/24.0.0/gencodeg.download/pd.huex10st.hs.gencodeg_24.0.0.tar.gz",
+#                repos = NULL, type = "source")
+
+library(pd.huex10st.hs.gencodeg)
+
+gse <- 'GSE12378'
+anno <- 'pd.huex10st.hs.gencodeg'
+
+filePaths = getGEOSuppFiles(gse, baseDir = 'data/fromGEO', makeDirectory = FALSE, filter_regex = 'RAW')
+untar(paste0('data/fromGEO/', gse, '_RAW.tar'), exdir = paste0('data/fromGEO/', gse, '_RAW'))
+
+celFiles = list.celfiles(paste0('data/fromGEO/', gse, '_RAW'), full.names=T, listGzipped=T)
+rawData = read.celfiles(celFiles, pkgname = anno)
+probesetData = oligo::rma(rawData)
+exprData = exprs(probesetData)
+
+rownames(exprData) <- unlist(lapply(rownames(exprData), function(x) strsplit(x, '_|\\.')[[1]][1]))
+colnames(exprData) <- unlist(lapply(colnames(exprData), function(x) strsplit(x, '_|\\.')[[1]][1]))
+
+filter <- which(!startsWith(rownames(exprData), 'ENSG'))
+if (length(filter) > 0) {
+  exprData <- exprData[-filter,]
+}
+
+saveRDS(exprData, file=paste0('data/rData/', gse, '_Expression.RDS'))
+
+
+########## ArrayExpress ##########
+
+### E-MTAB-26 dataset as an example
+# wget https://www.ebi.ac.uk/arrayexpress/files/E-TABM-26/E-TABM-26.sdrf.txt
+# wget https://www.ebi.ac.uk/arrayexpress/files/E-TABM-26/E-TABM-26.raw.1.zip
+# wget https://www.ebi.ac.uk/arrayexpress/files/E-TABM-26/E-TABM-26.raw.2.zip
+# wget https://www.ebi.ac.uk/arrayexpress/files/E-TABM-26/E-TABM-26.raw.3.zip
+# unzip E-TABM-26.raw.1.zip -d E-TABM-26/
+# unzip E-TABM-26.raw.1.zip -d E-TABM-26/
+# unzip E-TABM-26.raw.1.zip -d E-TABM-26/
+# 
+# mkdir E-TABM-26/U133A E-TABM-26/U133B
+# mv E-TABM-26/^B*CEL E-TABM-26/U133B/
+# mv E-TABM-26/*B.CEL E-TABM-26/U133B/
+# mv E-TABM-26/*.CEL E-TABM-26/U133A/
+```
